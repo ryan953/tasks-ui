@@ -21,7 +21,9 @@ struct LinearSidebarView: View {
                             .tag(LinearSelection.project(project.id))
                     }
                 } header: {
-                    Label(group.title, systemImage: group.statusType?.symbol ?? "square.stack.3d.up")
+                    // Plain text, matching the issue section: a header icon pushes
+                    // the title out of line with the rows beneath it.
+                    Text(group.title)
                 }
             }
         }
