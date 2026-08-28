@@ -26,20 +26,32 @@ public enum ProcessRunner {
     /// stdout and stderr are drained on separate queues. Reading them one after the
     /// other deadlocks as soon as the child writes more than a pipe buffer, and
     /// `dex list --json --all` is comfortably larger than that.
+    /// Waiting for a child blocks a thread, so the work runs on a Dispatch queue
+    /// rather than inside a `Task`. Swift's cooperative pool has about one thread per
+    /// core; blocking those starves every other async operation in the process,
+    /// which is how a 0.2s command turned into a 20s timeout under a parallel test
+    /// run on a small machine.
     public static func run(
         executable: String,
         arguments: [String],
         environment: [String: String]? = nil,
         timeout: Double = 30
     ) async throws -> ProcessResult {
-        try await Task.detached(priority: .userInitiated) {
-            try runSync(
-                executable: executable,
-                arguments: arguments,
-                environment: environment,
-                timeout: timeout
-            )
-        }.value
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try runSync(
+                        executable: executable,
+                        arguments: arguments,
+                        environment: environment,
+                        timeout: timeout
+                    )
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
     }
 
     static func runSync(

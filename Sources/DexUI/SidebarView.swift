@@ -178,6 +178,11 @@ struct TaskRow: View {
                     .help("Completed subtasks")
             }
             PriorityBadge(priority: task.priority)
+
+            Text(task.id)
+                .font(.caption2.monospaced())
+                .foregroundStyle(.tertiary)
+                .help("Task id")
         }
         .padding(.vertical, 1)
     }

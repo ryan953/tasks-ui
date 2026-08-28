@@ -7,7 +7,7 @@ import Testing
 /// Nothing here touches the user's own ~/.dex: every client gets its own
 /// `--storage-path` under a temporary directory. Skipped when dex is not installed
 /// so the suite still runs on a bare CI machine.
-@Suite("dex client against the real CLI", .enabled(if: DexProbe.isInstalled))
+@Suite("dex client against the real CLI", .enabled(if: DexProbe.isInstalled), .serialized)
 struct DexClientIntegrationTests {
     /// A client pointed at a fresh, empty store.
     static func makeClient() async throws -> (DexClient, URL) {

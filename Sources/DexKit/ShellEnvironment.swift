@@ -21,10 +21,21 @@ public enum ShellEnvironment {
         "/sbin",
     ]
 
+    /// The resolved PATH, computed once per process.
+    ///
+    /// Starting a login shell is expensive — it runs the full profile — and the
+    /// answer cannot change while the app is open, so every caller shares one
+    /// result instead of spawning another shell.
+    private static let cache = PathCache()
+
+    public static func loginPath() async -> String {
+        await cache.value(compute: resolveLoginPath)
+    }
+
     /// Ask the user's login shell to print its PATH.
     ///
     /// The marker brackets the value because rc files are free to print banners.
-    public static func loginPath() async -> String {
+    static func resolveLoginPath() async -> String {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let script = #"command printf "\#(marker)%s\#(marker)" "$PATH""#
         let result = try? await ProcessRunner.run(
@@ -72,5 +83,23 @@ public enum ShellEnvironment {
         env["NO_COLOR"] = "1"
         if env["HOME"] == nil { env["HOME"] = NSHomeDirectory() }
         return env
+    }
+}
+
+
+/// Computes the PATH at most once, even when several callers ask at the same time.
+private actor PathCache {
+    private var resolved: String?
+    private var inFlight: Task<String, Never>?
+
+    func value(compute: @escaping @Sendable () async -> String) async -> String {
+        if let resolved { return resolved }
+        if let inFlight { return await inFlight.value }
+        let task = Task { await compute() }
+        inFlight = task
+        let value = await task.value
+        resolved = value
+        inFlight = nil
+        return value
     }
 }

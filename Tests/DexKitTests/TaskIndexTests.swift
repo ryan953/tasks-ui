@@ -224,4 +224,23 @@ struct ShellEnvironmentTests {
         let path = await ShellEnvironment.loginPath()
         #expect(DexLocator.find(named: "node", in: path) != nil)
     }
+
+    /// Starting a login shell runs the whole profile. Doing that per caller once
+    /// starved a parallel test run badly enough that every command timed out, so the
+    /// answer is computed once and shared.
+    @Test func resolvesTheLoginPathOnlyOnce() async {
+        let first = await ShellEnvironment.loginPath()
+
+        let started = Date()
+        async let a = ShellEnvironment.loginPath()
+        async let b = ShellEnvironment.loginPath()
+        async let c = ShellEnvironment.loginPath()
+        let repeats = await [a, b, c]
+        let elapsed = Date().timeIntervalSince(started)
+
+        #expect(repeats.allSatisfy { $0 == first })
+        // A cached answer returns immediately; spawning three more login shells
+        // could not.
+        #expect(elapsed < 0.5, "repeat lookups took \(elapsed)s, so the cache is not working")
+    }
 }
