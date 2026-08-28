@@ -41,7 +41,7 @@ struct ContentView: View {
                 // so up front rather than letting the first save fail with a raw
                 // "Unknown option" from the CLI.
                 if model.source == .dex, dex.cliTooOld {
-                    UpgradeBanner()
+                    UpgradeBanner(binaryPath: dex.resolvedBinary)
                 }
                 detail
             }
@@ -113,15 +113,30 @@ struct ContentView: View {
 }
 
 private struct UpgradeBanner: View {
+    /// Named explicitly: with several version managers in play it is easy to upgrade
+    /// one dex while an older one still comes first on PATH, and then the upgrade
+    /// looks like it did nothing.
+    let binaryPath: String?
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
-            Text("dex is older than 0.16, so tasks are read-only. Upgrade with")
-                .font(.callout)
-            Text("npm install -g @zeeg/dex")
-                .font(.callout.monospaced())
-                .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text("dex is older than 0.16, so tasks are read-only. Upgrade with")
+                        .font(.callout)
+                    Text("npm install -g @zeeg/dex")
+                        .font(.callout.monospaced())
+                        .textSelection(.enabled)
+                }
+                if let binaryPath {
+                    Text("Using \(binaryPath) — if you just upgraded, another dex may come first on your PATH.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
             Spacer()
         }
         .padding(.horizontal, 16)
