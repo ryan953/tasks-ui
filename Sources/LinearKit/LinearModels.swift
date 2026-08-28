@@ -153,8 +153,48 @@ public struct LinearIssue: Codable, Hashable, Sendable, Identifiable {
 
 /// Project status in Linear is a free-form set per workspace, but the underlying
 /// type is one of these.
-public enum LinearProjectStatusType: String, Codable, Sendable {
+public enum LinearProjectStatusType: String, Codable, Sendable, CaseIterable {
     case backlog, planned, started, paused, completed, canceled
+
+    /// Finished one way or the other. Paused is not done — it is work that is
+    /// coming back.
+    public var isDone: Bool {
+        self == .completed || self == .canceled
+    }
+
+    /// Active work first, finished work last.
+    public var sortOrder: Int {
+        switch self {
+        case .started: 0
+        case .planned: 1
+        case .backlog: 2
+        case .paused: 3
+        case .completed: 4
+        case .canceled: 5
+        }
+    }
+
+    public var label: String {
+        switch self {
+        case .backlog: "Backlog"
+        case .planned: "Planned"
+        case .started: "In progress"
+        case .paused: "Paused"
+        case .completed: "Completed"
+        case .canceled: "Cancelled"
+        }
+    }
+
+    public var symbol: String {
+        switch self {
+        case .backlog: "tray"
+        case .planned: "calendar"
+        case .started: "play.circle.fill"
+        case .paused: "pause.circle"
+        case .completed: "checkmark.circle.fill"
+        case .canceled: "xmark.circle"
+        }
+    }
 }
 
 public struct LinearProject: Codable, Hashable, Sendable, Identifiable {
@@ -169,6 +209,8 @@ public struct LinearProject: Codable, Hashable, Sendable, Identifiable {
     public var progress: Double?
     public var targetDate: String?
     public var updatedAt: Date?
+
+    public var isDone: Bool { statusType?.isDone ?? false }
 
     public init(
         id: String,

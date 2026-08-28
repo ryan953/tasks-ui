@@ -84,10 +84,52 @@ final class LinearStore {
         }
     }
 
+    /// Completed and cancelled projects are hidden unless "Show done" is on, the
+    /// same rule the issue list follows. Paused is not hidden: that work is coming
+    /// back.
     var filteredProjects: [LinearProject] {
         projects
-            .filter { matches($0) }
-            .sorted { ($0.updatedAt ?? .distantPast) > ($1.updatedAt ?? .distantPast) }
+            .filter { matches($0) && (includeDone || !$0.isDone) }
+            .sorted(by: Self.projectOrder)
+    }
+
+    /// Projects grouped by status, active statuses first.
+    ///
+    /// Grouping uses the workspace's own status name so the sidebar reads the way
+    /// Linear does, while the ordering comes from the underlying type. A project
+    /// with no status sorts last under its own heading rather than disappearing.
+    var projectGroups: [ProjectGroup] {
+        let grouped = Dictionary(grouping: filteredProjects) { project in
+            project.statusName ?? "No status"
+        }
+        return grouped
+            .map { title, projects in
+                ProjectGroup(
+                    title: title,
+                    statusType: projects.first?.statusType,
+                    projects: projects.sorted(by: Self.projectOrder)
+                )
+            }
+            .sorted { a, b in
+                let left = a.statusType?.sortOrder ?? Int.max
+                let right = b.statusType?.sortOrder ?? Int.max
+                if left != right { return left < right }
+                return a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
+            }
+    }
+
+    struct ProjectGroup: Identifiable {
+        var title: String
+        var statusType: LinearProjectStatusType?
+        var projects: [LinearProject]
+        var id: String { title }
+    }
+
+    private static func projectOrder(_ a: LinearProject, _ b: LinearProject) -> Bool {
+        let left = a.statusType?.sortOrder ?? Int.max
+        let right = b.statusType?.sortOrder ?? Int.max
+        if left != right { return left < right }
+        return (a.updatedAt ?? .distantPast) > (b.updatedAt ?? .distantPast)
     }
 
     private func matches(_ issue: LinearIssue) -> Bool {

@@ -32,7 +32,9 @@ thing you picked on the right, editable in place.
 Switch the source at the top of the sidebar.
 
 - **Assigned to me**: the issues assigned to you and the projects you lead or belong
-  to, without opening a browser.
+  to, without opening a browser. Projects are grouped by status, active work first.
+- **Show done** includes completed and cancelled issues *and* projects; with it off
+  they are hidden. Paused projects always stay — that work is coming back.
 - **Edit in passing**: an issue's title, description, priority and status; a
   project's name, description and target date.
 - **Link out for the rest.** Linear has far more depth than this app should copy.

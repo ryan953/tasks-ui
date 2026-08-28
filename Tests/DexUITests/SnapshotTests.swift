@@ -88,6 +88,24 @@ struct SnapshotTests {
                 leadName: "Sam Rivers", progress: 0.42,
                 targetDate: "2026-12-01", updatedAt: Date()
             ),
+            LinearProject(
+                id: "proj-2", name: "Keyboard navigation",
+                statusName: "Planned", statusType: .planned,
+                url: "https://linear.app/acme/project/keyboard",
+                leadName: "Sam Rivers", progress: 0, updatedAt: Date()
+            ),
+            LinearProject(
+                id: "proj-3", name: "Offline cache",
+                statusName: "Backlog", statusType: .backlog,
+                url: "https://linear.app/acme/project/offline",
+                progress: 0, updatedAt: Date()
+            ),
+            LinearProject(
+                id: "proj-4", name: "Old migration",
+                statusName: "Completed", statusType: .completed,
+                url: "https://linear.app/acme/project/old",
+                progress: 1, updatedAt: Date()
+            ),
         ]
     }
 

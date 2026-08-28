@@ -14,12 +14,14 @@ struct LinearSidebarView: View {
                     }
                 }
             }
-            if !store.filteredProjects.isEmpty {
-                Section("My projects") {
-                    ForEach(store.filteredProjects) { project in
+            ForEach(store.projectGroups) { group in
+                Section {
+                    ForEach(group.projects) { project in
                         LinearProjectRow(project: project)
                             .tag(LinearSelection.project(project.id))
                     }
+                } header: {
+                    Label(group.title, systemImage: group.statusType?.symbol ?? "square.stack.3d.up")
                 }
             }
         }
@@ -67,7 +69,7 @@ struct LinearSidebarView: View {
             Toggle("Show done", isOn: $store.includeDone)
                 .toggleStyle(.checkbox)
                 .font(.caption)
-                .help("Include completed and cancelled issues")
+                .help("Include completed and cancelled issues and projects")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -149,16 +151,9 @@ struct LinearProjectRow: View {
     var body: some View {
         HStack(spacing: 7) {
             Image(systemName: "square.stack.3d.up")
-                .foregroundStyle(.purple)
+                .foregroundStyle(project.isDone ? Color.secondary : Color.purple)
                 .font(.system(size: 12))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(project.name).lineLimit(1)
-                if let status = project.statusName {
-                    Text(status)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-            }
+            Text(project.name).lineLimit(1)
             Spacer(minLength: 4)
             if let progress = project.progress {
                 Text("\(Int(progress * 100))%")

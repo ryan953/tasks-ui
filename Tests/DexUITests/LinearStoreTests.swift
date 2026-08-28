@@ -98,6 +98,80 @@ struct LinearStoreTests {
         #expect(store.filteredIssues.map(\.title) == ["Urgent", "Low", "None"])
     }
 
+    // MARK: - Projects
+
+    private static func projects() -> [LinearProject] {
+        func project(_ id: String, _ name: String, _ status: String?, _ type: LinearProjectStatusType?) -> LinearProject {
+            LinearProject(id: id, name: name, statusName: status, statusType: type, url: "https://linear.app/a/project/\(id)")
+        }
+        return [
+            project("p1", "Shipped thing", "Completed", .completed),
+            project("p2", "Active thing", "In Progress", .started),
+            project("p3", "Dropped thing", "Cancelled", .canceled),
+            project("p4", "Next thing", "Planned", .planned),
+            project("p5", "Resting thing", "Paused", .paused),
+            project("p6", "Unlabelled thing", nil, nil),
+        ]
+    }
+
+    /// Finished projects should not pad the list any more than finished issues do.
+    @Test func hidesDoneProjectsUnlessAsked() {
+        let store = LinearStore(issues: [], projects: Self.projects())
+        store.includeDone = false
+        let visible = store.filteredProjects.map(\.name)
+        #expect(!visible.contains("Shipped thing"))
+        #expect(!visible.contains("Dropped thing"))
+        // Paused work is coming back, so it stays.
+        #expect(visible.contains("Resting thing"))
+        #expect(visible.contains("Active thing"))
+    }
+
+    @Test func showsDoneProjectsWhenAsked() {
+        let store = LinearStore(issues: [], projects: Self.projects())
+        store.includeDone = true
+        let visible = store.filteredProjects.map(\.name)
+        #expect(visible.contains("Shipped thing"))
+        #expect(visible.contains("Dropped thing"))
+    }
+
+    /// A project with no status must not vanish just because it cannot be grouped.
+    @Test func keepsProjectsWithNoStatus() {
+        let store = LinearStore(issues: [], projects: Self.projects())
+        store.includeDone = false
+        #expect(store.filteredProjects.map(\.name).contains("Unlabelled thing"))
+    }
+
+    @Test func groupsProjectsByStatusWithActiveWorkFirst() {
+        let store = LinearStore(issues: [], projects: Self.projects())
+        store.includeDone = false
+        #expect(store.projectGroups.map(\.title) == ["In Progress", "Planned", "Paused", "No status"])
+        #expect(store.projectGroups.first?.projects.map(\.name) == ["Active thing"])
+    }
+
+    @Test func putsFinishedGroupsLastWhenShown() {
+        let store = LinearStore(issues: [], projects: Self.projects())
+        store.includeDone = true
+        let titles = store.projectGroups.map(\.title)
+        #expect(titles.first == "In Progress")
+        #expect(titles.suffix(3) == ["Completed", "Cancelled", "No status"])
+    }
+
+    /// Grouping uses the workspace's own status names, so two names sharing a type
+    /// stay apart rather than being merged into one heading.
+    @Test func keepsDistinctStatusNamesApart() {
+        let store = LinearStore(issues: [], projects: [
+            LinearProject(id: "a", name: "One", statusName: "In Review", statusType: .started, url: "u"),
+            LinearProject(id: "b", name: "Two", statusName: "Building", statusType: .started, url: "u"),
+        ])
+        #expect(store.projectGroups.map(\.title) == ["Building", "In Review"])
+    }
+
+    @Test func searchStillNarrowsTheGroups() {
+        let store = LinearStore(issues: [], projects: Self.projects())
+        store.query = "Active"
+        #expect(store.projectGroups.map(\.title) == ["In Progress"])
+    }
+
     @Test func searchesTitleIdentifierAndBody() {
         let store = LinearStore(issues: SnapshotTests.linearIssues(), projects: SnapshotTests.linearProjects())
         store.query = "ABC-31"
