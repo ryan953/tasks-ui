@@ -1,7 +1,7 @@
 import Foundation
 
-/// Finds the `dex` executable.
-public enum DexLocator {
+/// Finds a command-line tool on a PATH.
+public enum ExecutableLocator {
     /// Search `path` for an executable named `dex`.
     public static func find(named name: String = "dex", in path: String) -> String? {
         let fm = FileManager.default

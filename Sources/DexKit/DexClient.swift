@@ -87,7 +87,7 @@ public actor DexClient {
         let path = await ShellEnvironment.loginPath()
         searchPath = path
         environment = ShellEnvironment.environment(path: path)
-        binaryPath = DexLocator.resolve(override: override, path: path)
+        binaryPath = ExecutableLocator.resolve(override: override, path: path)
         return binaryPath
     }
 

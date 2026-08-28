@@ -40,9 +40,15 @@ Switch the source at the top of the sidebar.
   to the bulk views — **My Issues**, **Created by Me**, **All Projects**, and a Linear
   search pre-filled with whatever you typed in the sidebar.
 
-Connect it in **Settings → Linear** with a personal API key from
-linear.app → Settings → Security & access. The key is kept in your login keychain,
-never in preferences.
+**Nothing to set up if you use the [`linear` CLI](https://github.com/schpet/linear-cli).**
+If it is installed and logged in, the app borrows its key. It asks the CLI
+(`linear auth token`) rather than reading `~/.config/linear/credentials.toml`, so it
+keeps working after `linear auth migrate` moves the credential into the system
+keyring.
+
+Otherwise, put a personal API key in **Settings → Linear** (linear.app → Settings →
+Security & access). A key entered there is kept in your login keychain, never in
+preferences, and takes precedence over the CLI's.
 
 ## Links
 
@@ -138,7 +144,9 @@ artwork is kept in the repository.
   (skipped when `dex` is not installed). Set `DEX_UI_TEST_BIN` to test against a
   specific dex without disturbing the one on your PATH.
 - `Tests/LinearKitTests` — the GraphQL layer against recorded responses, through an
-  injectable transport, so no network or workspace is involved.
+  injectable transport, so no network or workspace is involved. Plus a read-only
+  live smoke suite that borrows a token from the `linear` CLI and runs the real
+  queries; it skips itself when the CLI is absent, so CI never touches a workspace.
 - `Tests/DexUITests` — renders the real views into an offscreen window and writes
   PNGs to `.build/snapshots`, so a layout regression is visible rather than
   described.

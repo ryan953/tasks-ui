@@ -9,7 +9,7 @@ struct SettingsView: View {
         TabView {
             DexSettings(store: model.dex)
                 .tabItem { Label("Dex", systemImage: "checklist") }
-            LinearSettings(store: model.linear)
+            LinearSettings(store: model.linear, searchPath: model.dex.searchPath)
                 .tabItem { Label("Linear", systemImage: "circle.grid.2x2") }
         }
         .frame(width: 520)
@@ -78,6 +78,7 @@ private struct DexSettings: View {
 
 private struct LinearSettings: View {
     @Bindable var store: LinearStore
+    let searchPath: String
 
     @State private var apiKey = ""
     @State private var isTesting = false
@@ -101,6 +102,16 @@ private struct LinearSettings: View {
                     }
                 }
 
+                if case let .cli(workspace) = store.keySource {
+                    Label(
+                        workspace.map { "Using the linear CLI's key for \($0)." }
+                            ?? "Using the linear CLI's key.",
+                        systemImage: "terminal"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+
                 switch testResult {
                 case let .success(message):
                     Label(message, systemImage: "checkmark.circle.fill")
@@ -117,13 +128,14 @@ private struct LinearSettings: View {
 
                 HStack {
                     if store.hasKey {
-                        Button("Disconnect", role: .destructive) {
+                        Button("Forget Saved Key", role: .destructive) {
                             Task {
-                                _ = await store.setAPIKey("")
+                                _ = await store.setAPIKey("", searchPath: searchPath)
                                 apiKey = ""
                                 testResult = nil
                             }
                         }
+                        .help("Remove the key from the keychain and fall back to the linear CLI's, if it has one")
                     }
                     Spacer()
                     Button(isTesting ? "Checking…" : "Save and Test") { saveAndTest() }
@@ -134,7 +146,7 @@ private struct LinearSettings: View {
                 Text("Linear")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Create a key at linear.app → Settings → Security & access → Personal API keys. It is stored in your login keychain, never in preferences.")
+                    Text("If the linear CLI is installed and logged in, its key is used automatically — nothing to set up. Otherwise create one at linear.app → Settings → Security & access → Personal API keys. A key you enter here is stored in your login keychain, never in preferences, and takes precedence over the CLI's.")
                     Link("Open Linear API settings", destination: URL(string: "https://linear.app/settings/account/security")!)
                 }
                 .font(.caption)
@@ -149,7 +161,9 @@ private struct LinearSettings: View {
         testResult = nil
         Task {
             // An empty field with a key already saved means "test what is stored".
-            let ok = apiKey.isEmpty ? await store.reload() : await store.setAPIKey(apiKey)
+            let ok = apiKey.isEmpty
+                ? await store.reload()
+                : await store.setAPIKey(apiKey, searchPath: searchPath)
             isTesting = false
             if ok, let account = store.account {
                 apiKey = ""

@@ -95,10 +95,10 @@ final class AppModel {
     }
 
     func bootstrap() async {
-        // Both sides are independent, so a missing dex must not stop Linear loading.
-        async let dexReady: Void = dex.bootstrap()
-        async let linearReady: Void = linear.bootstrap()
-        _ = await (dexReady, linearReady)
+        // dex resolves the login shell PATH; Linear needs the same PATH to find the
+        // `linear` CLI, so it waits for that rather than resolving it twice.
+        await dex.bootstrap()
+        await linear.bootstrap(searchPath: dex.searchPath)
     }
 
     /// Follow a `task://` link. Returns false when nothing matched.

@@ -170,18 +170,18 @@ struct ConfigTests {
 @Suite("Locating the dex binary")
 struct LocatorTests {
     @Test func findsAnExecutableOnThePath() {
-        #expect(DexLocator.find(named: "ls", in: "/nowhere:/bin") == "/bin/ls")
-        #expect(DexLocator.find(named: "definitely-not-here", in: "/bin") == nil)
+        #expect(ExecutableLocator.find(named: "ls", in: "/nowhere:/bin") == "/bin/ls")
+        #expect(ExecutableLocator.find(named: "definitely-not-here", in: "/bin") == nil)
     }
 
     @Test func honoursAnAbsoluteOverride() {
-        #expect(DexLocator.resolve(override: "/bin/ls", path: "") == "/bin/ls")
-        #expect(DexLocator.resolve(override: "/bin/nope", path: "/bin") == nil)
+        #expect(ExecutableLocator.resolve(override: "/bin/ls", path: "") == "/bin/ls")
+        #expect(ExecutableLocator.resolve(override: "/bin/nope", path: "/bin") == nil)
     }
 
     @Test func aBlankOverrideFallsBackToSearching() {
-        #expect(DexLocator.resolve(override: "   ", path: "/bin") == nil)
-        #expect(DexLocator.resolve(override: "ls", path: "/bin") == "/bin/ls")
+        #expect(ExecutableLocator.resolve(override: "   ", path: "/bin") == nil)
+        #expect(ExecutableLocator.resolve(override: "ls", path: "/bin") == "/bin/ls")
     }
 }
 
@@ -222,7 +222,7 @@ struct ShellEnvironmentTests {
     /// a Node script, so its shebang needs node on PATH.
     @Test func recoversARealPathContainingNode() async {
         let path = await ShellEnvironment.loginPath()
-        #expect(DexLocator.find(named: "node", in: path) != nil)
+        #expect(ExecutableLocator.find(named: "node", in: path) != nil)
     }
 
     /// Starting a login shell runs the whole profile. Doing that per caller once

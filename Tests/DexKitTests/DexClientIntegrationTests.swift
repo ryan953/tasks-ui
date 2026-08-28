@@ -251,6 +251,6 @@ enum DexProbe {
         }
         let path = (ProcessInfo.processInfo.environment["PATH"] ?? "")
             + ":" + ShellEnvironment.fallbackPaths.joined(separator: ":")
-        return DexLocator.find(in: path) != nil
+        return ExecutableLocator.find(in: path) != nil
     }()
 }

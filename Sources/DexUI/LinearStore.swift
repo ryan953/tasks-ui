@@ -1,3 +1,4 @@
+import DexKit
 import Foundation
 import LinearKit
 import Observation
@@ -17,6 +18,16 @@ final class LinearStore {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
     private(set) var hasKey = false
+    private(set) var keySource: KeySource = .none
+
+    /// Where the API key came from, so Settings can say so.
+    enum KeySource: Equatable {
+        case none
+        /// Entered in Settings and kept in the login keychain.
+        case keychain
+        /// Borrowed from the `linear` CLI, naming its workspace when known.
+        case cli(workspace: String?)
+    }
     /// Workflow states per team, fetched the first time an issue from that team is
     /// opened. Teams keep their own sets, so there is no workspace-wide list.
     private(set) var statesByTeam: [String: [LinearState]] = [:]
@@ -43,6 +54,7 @@ final class LinearStore {
         self.client = client
         includeDone = false
         self.hasKey = hasKey
+        keySource = hasKey ? .keychain : .none
     }
 
     /// Seed without touching the network, for previews and snapshot tests.
@@ -53,6 +65,7 @@ final class LinearStore {
         self.projects = projects
         self.selection = selection
         hasKey = true
+        keySource = .keychain
         account = LinearAccount(
             user: LinearUser(id: "u", name: "Preview User", organizationURLKey: "acme"),
             organizationName: "Acme",
@@ -107,29 +120,46 @@ final class LinearStore {
 
     // MARK: - Lifecycle
 
-    func bootstrap() async {
-        let key = LinearKeychain.load()
-        hasKey = key != nil
-        await client.setAPIKey(key)
-        guard hasKey else { return }
+    /// Prefer a key the user entered; otherwise borrow the `linear` CLI's, so an
+    /// already-authenticated CLI means nothing to set up.
+    func bootstrap(searchPath: String) async {
+        if let saved = LinearKeychain.load() {
+            keySource = .keychain
+            hasKey = true
+            await client.setAPIKey(saved)
+        } else if let cli = LinearCLICredentials.locate(searchPath: searchPath),
+                  let token = await cli.token() {
+            keySource = .cli(workspace: await cli.workspace())
+            hasKey = true
+            await client.setAPIKey(token)
+        } else {
+            keySource = .none
+            hasKey = false
+            await client.setAPIKey(nil)
+            return
+        }
         await reload()
     }
 
-    func setAPIKey(_ key: String) async -> Bool {
+    /// Save an explicit key, or clear it and fall back to the CLI.
+    func setAPIKey(_ key: String, searchPath: String) async -> Bool {
         do {
             try LinearKeychain.save(key)
         } catch {
             errorMessage = error.localizedDescription
             return false
         }
-        await client.setAPIKey(key.isEmpty ? nil : key)
-        hasKey = !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        guard hasKey else {
+        guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             issues = []
             projects = []
             account = nil
+            // Clearing a saved key should return to the CLI's, not to nothing.
+            await bootstrap(searchPath: searchPath)
             return true
         }
+        keySource = .keychain
+        hasKey = true
+        await client.setAPIKey(key)
         return await reload()
     }
 
