@@ -1,7 +1,23 @@
 import DexKit
+import LinearKit
 import SwiftUI
 
 struct SettingsView: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        TabView {
+            DexSettings(store: model.dex)
+                .tabItem { Label("Dex", systemImage: "checklist") }
+            LinearSettings(store: model.linear)
+                .tabItem { Label("Linear", systemImage: "circle.grid.2x2") }
+        }
+        .frame(width: 520)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct DexSettings: View {
     @Bindable var store: TaskStore
 
     @State private var dexPath = Preferences.dexPath ?? ""
@@ -18,6 +34,11 @@ struct SettingsView: View {
                         .foregroundStyle(store.resolvedBinary == nil ? .red : .secondary)
                         .textSelection(.enabled)
                 }
+                if store.cliTooOld {
+                    Label("This dex is older than 0.16. Run: npm install -g @zeeg/dex", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
             } header: {
                 Text("Executable")
             } footer: {
@@ -32,7 +53,7 @@ struct SettingsView: View {
             } header: {
                 Text("Task storage")
             } footer: {
-                Text("Leave blank to use the store dex is configured for. Set it to work against a different collection of tasks.")
+                Text("Leave blank to use the store dex is configured for.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -46,13 +67,98 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func apply() {
         Preferences.dexPath = dexPath.trimmingCharacters(in: .whitespaces)
         Preferences.storagePath = storagePath.trimmingCharacters(in: .whitespaces)
         Task { await store.reconfigure() }
+    }
+}
+
+private struct LinearSettings: View {
+    @Bindable var store: LinearStore
+
+    @State private var apiKey = ""
+    @State private var isTesting = false
+    @State private var testResult: TestResult?
+
+    private enum TestResult: Equatable {
+        case success(String)
+        case failure(String)
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                SecureField("Personal API key", text: $apiKey, prompt: Text(store.hasKey ? "Saved in your keychain" : "lin_api_…"))
+                    .textFieldStyle(.roundedBorder)
+
+                if let account = store.account {
+                    LabeledContent("Connected as") {
+                        Text("\(account.user.name) · \(account.organizationName)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                switch testResult {
+                case let .success(message):
+                    Label(message, systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                case let .failure(message):
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                case nil:
+                    EmptyView()
+                }
+
+                HStack {
+                    if store.hasKey {
+                        Button("Disconnect", role: .destructive) {
+                            Task {
+                                _ = await store.setAPIKey("")
+                                apiKey = ""
+                                testResult = nil
+                            }
+                        }
+                    }
+                    Spacer()
+                    Button(isTesting ? "Checking…" : "Save and Test") { saveAndTest() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isTesting || (apiKey.isEmpty && !store.hasKey))
+                }
+            } header: {
+                Text("Linear")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Create a key at linear.app → Settings → Security & access → Personal API keys. It is stored in your login keychain, never in preferences.")
+                    Link("Open Linear API settings", destination: URL(string: "https://linear.app/settings/account/security")!)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func saveAndTest() {
+        isTesting = true
+        testResult = nil
+        Task {
+            // An empty field with a key already saved means "test what is stored".
+            let ok = apiKey.isEmpty ? await store.reload() : await store.setAPIKey(apiKey)
+            isTesting = false
+            if ok, let account = store.account {
+                apiKey = ""
+                testResult = .success(
+                    "Connected to \(account.organizationName) — \(store.issues.count) issues, \(store.projects.count) projects."
+                )
+            } else {
+                testResult = .failure(store.errorMessage ?? "Could not reach Linear.")
+            }
+        }
     }
 }

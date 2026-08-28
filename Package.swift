@@ -6,8 +6,10 @@ let package = Package(
     platforms: [.macOS(.v14)],
     targets: [
         .target(name: "DexKit"),
-        .executableTarget(name: "DexUI", dependencies: ["DexKit"]),
+        .target(name: "LinearKit"),
+        .executableTarget(name: "DexUI", dependencies: ["DexKit", "LinearKit"]),
         .testTarget(name: "DexKitTests", dependencies: ["DexKit"]),
-        .testTarget(name: "DexUITests", dependencies: ["DexUI", "DexKit"]),
+        .testTarget(name: "LinearKitTests", dependencies: ["LinearKit"]),
+        .testTarget(name: "DexUITests", dependencies: ["DexUI", "DexKit", "LinearKit"]),
     ]
 )

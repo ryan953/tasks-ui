@@ -20,7 +20,7 @@ struct SidebarView: View {
         .safeAreaInset(edge: .bottom) { statusBar }
         .toolbar { toolbarItems }
         .confirmationDialog(
-            "Delete “\(confirmingDelete?.description ?? "")”?",
+            "Delete “\(confirmingDelete?.name ?? "")”?",
             isPresented: Binding(
                 get: { confirmingDelete != nil },
                 set: { if !$0 { confirmingDelete = nil } }
@@ -130,7 +130,11 @@ struct SidebarView: View {
     private func menu(for task: DexTask) -> some View {
         if task.completed {
             Button("Reopen") { Task { await store.reopen(task.id) } }
+            Button("Archive") { Task { await store.archive(task.id) } }
         } else {
+            if store.index.state(of: task) != .inProgress {
+                Button("Start") { Task { await store.start(task.id) } }
+            }
             Button("Mark as Done…") { store.selection = task.id }
         }
         Button("Add Subtask…") {
@@ -157,9 +161,9 @@ struct TaskRow: View {
             Image(systemName: state.symbol)
                 .foregroundStyle(tint)
                 .font(.system(size: 12))
-                .help(state.rawValue.capitalized)
+                .help(state.label)
 
-            Text(task.description.isEmpty ? "Untitled" : task.description)
+            Text(task.name.isEmpty ? "Untitled" : task.name)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .strikethrough(task.completed, color: .secondary)
@@ -181,6 +185,7 @@ struct TaskRow: View {
     private var tint: Color {
         switch state {
         case .completed: .green
+        case .inProgress: .blue
         case .blocked: .orange
         case .ready: .secondary
         }

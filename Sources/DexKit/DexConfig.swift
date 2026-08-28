@@ -3,8 +3,8 @@ import Foundation
 /// Reads the bits of `~/.config/dex/dex.toml` the app needs.
 ///
 /// Only the file-storage path matters: `dex` has no command to un-complete a task,
-/// so that one operation edits `<storage>/tasks/<id>.json` in place, exactly as the
-/// VS Code extension does. Everything else goes through the CLI.
+/// so that one operation edits the store directly. Everything else goes through the
+/// CLI.
 public enum DexConfig {
     public static var configURL: URL {
         URL(fileURLWithPath: NSHomeDirectory())
@@ -13,10 +13,16 @@ public enum DexConfig {
 
     public static let defaultStoragePath = "\(NSHomeDirectory())/.dex"
 
-    /// Directory holding one JSON file per task.
-    public static func tasksDirectory(storagePath: String? = nil) -> URL {
-        let base = storagePath ?? resolveStoragePath()
-        return URL(fileURLWithPath: expandTilde(base)).appendingPathComponent("tasks")
+    /// The store directory itself. Watched for changes, and home to tasks.jsonl.
+    public static func storageDirectory(storagePath: String? = nil) -> URL {
+        URL(fileURLWithPath: expandTilde(storagePath ?? resolveStoragePath()))
+    }
+
+    /// dex 0.16 keeps every task on one line of this file. Older versions kept a
+    /// `tasks/` directory instead; dex migrates that on first run and leaves the old
+    /// directory behind as `tasks.bak`.
+    public static func tasksFile(storagePath: String? = nil) -> URL {
+        storageDirectory(storagePath: storagePath).appendingPathComponent("tasks.jsonl")
     }
 
     public static func resolveStoragePath() -> String {

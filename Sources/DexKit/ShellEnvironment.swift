@@ -27,18 +27,14 @@ public enum ShellEnvironment {
     public static func loginPath() async -> String {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let script = #"command printf "\#(marker)%s\#(marker)" "$PATH""#
-        guard
-            let result = try? await ProcessRunner.run(
-                executable: shell,
-                arguments: ["-ilc", script],
-                environment: nil,
-                timeout: 8
-            ),
-            let extracted = extractPath(from: result.stdout)
-        else {
-            return fallbackPaths.joined(separator: ":")
-        }
-        return merge(extracted)
+        let result = try? await ProcessRunner.run(
+            executable: shell,
+            arguments: ["-ilc", script],
+            environment: nil,
+            timeout: 8
+        )
+        let extracted = result.flatMap { extractPath(from: $0.stdout) }
+        return merge(extracted ?? "")
     }
 
     static func extractPath(from output: String) -> String? {
@@ -48,11 +44,22 @@ public enum ShellEnvironment {
         return value.isEmpty ? nil : value
     }
 
-    /// Keep the shell's ordering and append any fallback directory it missed.
-    public static func merge(_ path: String) -> String {
+    /// Keep the shell's ordering, then anything already in this process's own PATH,
+    /// then the fallbacks.
+    ///
+    /// The inherited PATH matters because `zsh -l` runs `/etc/zprofile`, which on
+    /// macOS rebuilds PATH from `/etc/paths` via `path_helper`. That drops entries
+    /// the current process was given — a Node installed by a CI action, or a
+    /// directory exported before launching the app from a terminal — so the login
+    /// shell's answer alone can be narrower than what we started with.
+    public static func merge(_ path: String, inherited: String? = nil) -> String {
+        let inheritedPath = inherited ?? ProcessInfo.processInfo.environment["PATH"] ?? ""
         var seen = Set<String>()
         var ordered: [String] = []
-        for dir in path.split(separator: ":").map(String.init) + fallbackPaths where !dir.isEmpty {
+        let candidates = path.split(separator: ":").map(String.init)
+            + inheritedPath.split(separator: ":").map(String.init)
+            + fallbackPaths
+        for dir in candidates where !dir.isEmpty {
             if seen.insert(dir).inserted { ordered.append(dir) }
         }
         return ordered.joined(separator: ":")

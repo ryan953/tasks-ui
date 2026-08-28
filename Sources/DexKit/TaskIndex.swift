@@ -1,13 +1,14 @@
 import Foundation
 
 public enum StatusFilter: String, CaseIterable, Identifiable, Sendable {
-    case all, ready, blocked, pending, completed
+    case all, ready, inProgress, blocked, pending, completed
     public var id: String { rawValue }
 
     public var label: String {
         switch self {
         case .all: "All"
         case .ready: "Ready"
+        case .inProgress: "In progress"
         case .blocked: "Blocked"
         case .pending: "Pending"
         case .completed: "Completed"
@@ -75,13 +76,17 @@ public struct TaskIndex: Sendable {
 
     /// A pending task is blocked while any task in `blockedBy` is still open.
     /// Blockers that no longer exist are ignored, matching `dex`'s own behaviour.
+    ///
+    /// Blocked outranks in-progress: a started task whose blocker reopened is a
+    /// problem the user should see, not something to hide behind a "working on it".
     public func state(of task: DexTask) -> TaskState {
         if task.completed { return .completed }
         let hasOpenBlocker = task.blockedBy.contains { id in
             guard let blocker = byID[id] else { return false }
             return !blocker.completed
         }
-        return hasOpenBlocker ? .blocked : .ready
+        if hasOpenBlocker { return .blocked }
+        return task.startedAt != nil ? .inProgress : .ready
     }
 
     public func openBlockers(of task: DexTask) -> [DexTask] {
@@ -94,6 +99,7 @@ public struct TaskIndex: Sendable {
         case .completed: task.completed
         case .pending: !task.completed
         case .ready: state(of: task) == .ready
+        case .inProgress: state(of: task) == .inProgress
         case .blocked: state(of: task) == .blocked
         }
     }
@@ -101,7 +107,7 @@ public struct TaskIndex: Sendable {
     public func matches(_ task: DexTask, query: String) -> Bool {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return true }
-        let haystack = [task.description, task.context ?? "", task.id, task.result ?? ""]
+        let haystack = [task.name, task.details ?? "", task.id, task.result ?? ""]
             .joined(separator: "\n")
         return haystack.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil
     }
@@ -149,7 +155,7 @@ public struct TaskIndex: Sendable {
             case .updated:
                 return (a.updatedAt ?? .distantPast) > (b.updatedAt ?? .distantPast)
             case .alpha:
-                return a.description.localizedCaseInsensitiveCompare(b.description) == .orderedAscending
+                return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
             }
         }
     }

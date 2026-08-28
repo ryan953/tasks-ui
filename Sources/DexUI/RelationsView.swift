@@ -82,6 +82,15 @@ struct RelationsView: View {
 
 /// One linked task. Clicking it moves the selection there.
 private struct RelationRow<Trailing: View>: View {
+    static func tint(for state: TaskState) -> Color {
+        switch state {
+        case .completed: .green
+        case .inProgress: .blue
+        case .blocked: .orange
+        case .ready: .secondary
+        }
+    }
+
     let store: TaskStore
     let task: DexTask
     @ViewBuilder let trailing: Trailing
@@ -94,9 +103,9 @@ private struct RelationRow<Trailing: View>: View {
                 HStack(spacing: 7) {
                     let state = store.index.state(of: task)
                     Image(systemName: state.symbol)
-                        .foregroundStyle(state == .completed ? .green : state == .blocked ? .orange : .secondary)
+                        .foregroundStyle(Self.tint(for: state))
                         .font(.caption)
-                    Text(task.description)
+                    Text(task.name)
                         .lineLimit(1)
                         .strikethrough(task.completed, color: .secondary)
                     Text(task.id)
@@ -186,7 +195,7 @@ struct TaskPicker: View {
 
     private var label: String {
         guard !selection.isEmpty else { return title }
-        return store.index[selection]?.description ?? selection
+        return store.index[selection]?.name ?? selection
     }
 }
 
@@ -229,7 +238,7 @@ struct TaskSearchList: View {
                         }
                         ForEach(matches) { task in
                             PickerRow(
-                                title: task.description,
+                                title: task.name,
                                 subtitle: "\(task.id) · P\(task.priority)",
                                 muted: false
                             ) {

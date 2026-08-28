@@ -6,13 +6,13 @@ struct NewTaskSheet: View {
     let parentID: String?
 
     @Environment(\.dismiss) private var dismiss
-    @State private var description = ""
-    @State private var context = ""
+    @State private var name = ""
+    @State private var details = ""
     @State private var priority = 1
     @State private var parent = ""
     @State private var blockedBy: [String] = []
     @State private var isSaving = false
-    @FocusState private var descriptionFocused: Bool
+    @FocusState private var nameFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -26,15 +26,15 @@ struct NewTaskSheet: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    field("Description") {
-                        TextField("What needs doing?", text: $description, axis: .vertical)
+                    field("Name") {
+                        TextField("What needs doing?", text: $name, axis: .vertical)
                             .textFieldStyle(.roundedBorder)
                             .lineLimit(1...3)
-                            .focused($descriptionFocused)
+                            .focused($nameFocused)
                     }
 
-                    field("Context") {
-                        TextEditor(text: $context)
+                    field("Description") {
+                        TextEditor(text: $details)
                             .font(.system(.body, design: .monospaced))
                             .scrollContentBackground(.hidden)
                             .padding(7)
@@ -45,7 +45,7 @@ struct NewTaskSheet: View {
                                     .stroke(Color(nsColor: .separatorColor))
                             )
                             .overlay(alignment: .topLeading) {
-                                if context.isEmpty {
+                                if details.isEmpty {
                                     Text("Requirements, approach, done criteria…")
                                         .foregroundStyle(.tertiary)
                                         .padding(.horizontal, 12)
@@ -79,7 +79,7 @@ struct NewTaskSheet: View {
                             }
                             ForEach(store.index.tasks(ids: blockedBy)) { blocker in
                                 HStack(spacing: 7) {
-                                    Text(blocker.description).lineLimit(1)
+                                    Text(blocker.name).lineLimit(1)
                                     Text(blocker.id)
                                         .font(.caption2.monospaced())
                                         .foregroundStyle(.tertiary)
@@ -118,12 +118,12 @@ struct NewTaskSheet: View {
         .frame(width: 560, height: 620)
         .onAppear {
             parent = parentID ?? ""
-            descriptionFocused = true
+            nameFocused = true
         }
     }
 
     private var isValid: Bool {
-        !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
@@ -137,10 +137,8 @@ struct NewTaskSheet: View {
         guard isValid else { return }
         isSaving = true
         let task = NewTask(
-            description: description.trimmingCharacters(in: .whitespacesAndNewlines),
-            // dex requires a context; an empty string is accepted and keeps the
-            // field optional for the user.
-            context: context,
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            details: details,
             priority: priority,
             parentID: parent.isEmpty ? nil : parent,
             blockedBy: blockedBy
@@ -156,17 +154,18 @@ struct NewTaskSheet: View {
 /// Asks for the result text `dex complete` records against the task.
 struct CompleteSheet: View {
     let task: DexTask
-    let onComplete: (String) -> Void
+    let onComplete: (_ result: String, _ commit: String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var result = ""
+    @State private var commit = ""
     @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Mark as Done")
                 .font(.title3.weight(.semibold))
-            Text(task.description)
+            Text(task.name)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
 
@@ -194,12 +193,20 @@ struct CompleteSheet: View {
                     }
             }
 
+            VStack(alignment: .leading, spacing: 6) {
+                SectionLabel("Commit (optional)")
+                TextField("SHA to link to this task", text: $commit)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .help("dex links the commit and can close a linked GitHub issue")
+            }
+
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
                     .keyboardShortcut(.escape)
                 Button("Mark as Done") {
-                    onComplete(result.isEmpty ? "Done" : result)
+                    onComplete(result.isEmpty ? "Done" : result, commit.isEmpty ? nil : commit)
                     dismiss()
                 }
                 .keyboardShortcut(.return, modifiers: .command)

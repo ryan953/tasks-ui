@@ -15,7 +15,7 @@ struct DexClientIntegrationTests {
             .appendingPathComponent("dex-ui-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: store, withIntermediateDirectories: true)
         let client = DexClient()
-        await client.bootstrap(override: nil)
+        await client.bootstrap(override: DexProbe.binaryOverride)
         await client.setStoragePath(store.path)
         return (client, store)
     }
@@ -25,31 +25,31 @@ struct DexClientIntegrationTests {
         defer { try? FileManager.default.removeItem(at: store) }
 
         let id = try await client.create(
-            NewTask(description: "Write the release workflow", context: "GitHub Actions", priority: 2)
+            NewTask(name: "Write the release workflow", details: "GitHub Actions", priority: 2)
         )
         let taskID = try #require(id)
 
         let tasks = try await client.list()
         #expect(tasks.count == 1)
-        #expect(tasks[0].description == "Write the release workflow")
+        #expect(tasks[0].name == "Write the release workflow")
         #expect(tasks[0].priority == 2)
 
         let shown = try await client.show(taskID)
         #expect(shown.id == taskID)
-        #expect(shown.context == "GitHub Actions")
+        #expect(shown.details == "GitHub Actions")
     }
 
     @Test func editsFieldsIndividually() async throws {
         let (client, store) = try await Self.makeClient()
         defer { try? FileManager.default.removeItem(at: store) }
 
-        let id = try #require(try await client.create(NewTask(description: "Before", context: "ctx", priority: 3)))
-        try await client.edit(id, TaskEdit(description: "After"))
+        let id = try #require(try await client.create(NewTask(name: "Before", details: "ctx", priority: 3)))
+        try await client.edit(id, TaskEdit(name: "After"))
 
         let task = try await client.show(id)
-        #expect(task.description == "After")
+        #expect(task.name == "After")
         // The untouched fields must survive an edit that only names one of them.
-        #expect(task.context == "ctx")
+        #expect(task.details == "ctx")
         #expect(task.priority == 3)
     }
 
@@ -59,8 +59,8 @@ struct DexClientIntegrationTests {
         let (client, store) = try await Self.makeClient()
         defer { try? FileManager.default.removeItem(at: store) }
 
-        let blocker = try #require(try await client.create(NewTask(description: "First", context: "c")))
-        let dependent = try #require(try await client.create(NewTask(description: "Second", context: "c")))
+        let blocker = try #require(try await client.create(NewTask(name: "First", details: "c")))
+        let dependent = try #require(try await client.create(NewTask(name: "Second", details: "c")))
 
         try await client.edit(dependent, TaskEdit(addBlockers: [blocker]))
 
@@ -84,8 +84,8 @@ struct DexClientIntegrationTests {
         let (client, store) = try await Self.makeClient()
         defer { try? FileManager.default.removeItem(at: store) }
 
-        let parent = try #require(try await client.create(NewTask(description: "Epic", context: "c")))
-        let child = try #require(try await client.create(NewTask(description: "Subtask", context: "c", parentID: parent)))
+        let parent = try #require(try await client.create(NewTask(name: "Epic", details: "c")))
+        let child = try #require(try await client.create(NewTask(name: "Subtask", details: "c", parentID: parent)))
 
         let index = TaskIndex(tasks: try await client.list())
         #expect(index[child]?.parentID == parent)
@@ -100,7 +100,7 @@ struct DexClientIntegrationTests {
         let (client, store) = try await Self.makeClient()
         defer { try? FileManager.default.removeItem(at: store) }
 
-        let id = try #require(try await client.create(NewTask(description: "Ship it", context: "c")))
+        let id = try #require(try await client.create(NewTask(name: "Ship it", details: "c")))
         try await client.complete(id, result: "Shipped in v1.0")
 
         var task = try await client.show(id)
@@ -122,9 +122,9 @@ struct DexClientIntegrationTests {
         let (client, store) = try await Self.makeClient()
         defer { try? FileManager.default.removeItem(at: store) }
 
-        let parent = try #require(try await client.create(NewTask(description: "Epic", context: "c")))
-        let child = try #require(try await client.create(NewTask(description: "Kid", context: "c", parentID: parent)))
-        let other = try #require(try await client.create(NewTask(description: "Other", context: "c")))
+        let parent = try #require(try await client.create(NewTask(name: "Epic", details: "c")))
+        let child = try #require(try await client.create(NewTask(name: "Kid", details: "c", parentID: parent)))
+        let other = try #require(try await client.create(NewTask(name: "Other", details: "c")))
         try await client.edit(other, TaskEdit(addBlockers: [child]))
         try await client.complete(child, result: "done")
 
@@ -137,11 +137,68 @@ struct DexClientIntegrationTests {
         #expect(index[child]?.completed == false)
     }
 
+    /// Reopening rewrites one line of tasks.jsonl. Every other line, and any field
+    /// this app does not model, must come through untouched.
+    @Test func reopeningLeavesTheRestOfTheStoreAlone() async throws {
+        let (client, store) = try await Self.makeClient()
+        defer { try? FileManager.default.removeItem(at: store) }
+
+        let target = try #require(try await client.create(NewTask(name: "Target", details: "d")))
+        let bystander = try #require(try await client.create(NewTask(name: "Bystander", details: "d")))
+        try await client.complete(target, result: "done")
+
+        // Add a field the app's model knows nothing about.
+        let file = await client.tasksFile()
+        let original = try String(contentsOf: file, encoding: .utf8)
+        let doctored = original
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map { line -> String in
+                guard line.contains("\"id\":\"\(target)\"") else { return String(line) }
+                return String(line.dropLast()) + ",\"unmodelled_field\":\"keep me\"}"
+            }
+            .joined(separator: "\n") + "\n"
+        try Data(doctored.utf8).write(to: file, options: .atomic)
+
+        try await client.uncomplete(target)
+
+        let after = try String(contentsOf: file, encoding: .utf8)
+        #expect(after.contains("keep me"), "an unmodelled field was dropped")
+
+        let index = TaskIndex(tasks: try await client.list())
+        #expect(index[target]?.completed == false)
+        #expect(index[bystander]?.name == "Bystander")
+        #expect(index.tasks.count == 2)
+    }
+
+    @Test func reportsReopeningAMissingTask() async throws {
+        let (client, store) = try await Self.makeClient()
+        defer { try? FileManager.default.removeItem(at: store) }
+        _ = try await client.create(NewTask(name: "Something", details: "d"))
+
+        await #expect(throws: DexError.self) {
+            try await client.uncomplete("nosuchid")
+        }
+    }
+
+    @Test func startsATask() async throws {
+        let (client, store) = try await Self.makeClient()
+        defer { try? FileManager.default.removeItem(at: store) }
+
+        let id = try #require(try await client.create(NewTask(name: "Work", details: "d")))
+        var index = TaskIndex(tasks: try await client.list())
+        #expect(index.state(of: index[id]!) == .ready)
+
+        try await client.start(id)
+        index = TaskIndex(tasks: try await client.list())
+        #expect(index[id]?.startedAt != nil)
+        #expect(index.state(of: index[id]!) == .inProgress)
+    }
+
     @Test func deletesATask() async throws {
         let (client, store) = try await Self.makeClient()
         defer { try? FileManager.default.removeItem(at: store) }
 
-        let id = try #require(try await client.create(NewTask(description: "Temporary", context: "c")))
+        let id = try #require(try await client.create(NewTask(name: "Temporary", details: "c")))
         try await client.delete(id)
         #expect(try await client.list().isEmpty)
     }
@@ -150,8 +207,8 @@ struct DexClientIntegrationTests {
         let (client, store) = try await Self.makeClient()
         defer { try? FileManager.default.removeItem(at: store) }
 
-        let done = try #require(try await client.create(NewTask(description: "Done", context: "c")))
-        _ = try await client.create(NewTask(description: "Open", context: "c"))
+        let done = try #require(try await client.create(NewTask(name: "Done", details: "c")))
+        _ = try await client.create(NewTask(name: "Open", details: "c"))
         try await client.complete(done, result: "r")
 
         #expect(try await client.list(includeCompleted: true).count == 2)
@@ -174,15 +231,24 @@ struct DexClientIntegrationTests {
 
         // Quotes and newlines go straight through argv, so nothing needs escaping —
         // this guards against anyone "fixing" that with a shell string.
-        let context = "Line one\nLine \"two\" with 'quotes'\n  - a $VARIABLE and `backticks`"
-        let id = try #require(try await client.create(NewTask(description: "Tricky", context: context)))
-        #expect(try await client.show(id).context == context)
+        let body = "Line one\nLine \"two\" with 'quotes'\n  - a $VARIABLE and `backticks`"
+        let id = try #require(try await client.create(NewTask(name: "Tricky", details: body)))
+        #expect(try await client.show(id).details == body)
     }
 }
 
 /// Synchronous probe, because a suite condition cannot await.
 enum DexProbe {
+    /// Point the suite at a specific dex, so it can run against a pinned version
+    /// without disturbing whatever is installed globally.
+    static var binaryOverride: String? {
+        ProcessInfo.processInfo.environment["DEX_UI_TEST_BIN"]
+    }
+
     static let isInstalled: Bool = {
+        if let binaryOverride, FileManager.default.isExecutableFile(atPath: binaryOverride) {
+            return true
+        }
         let path = (ProcessInfo.processInfo.environment["PATH"] ?? "")
             + ":" + ShellEnvironment.fallbackPaths.joined(separator: ":")
         return DexLocator.find(in: path) != nil

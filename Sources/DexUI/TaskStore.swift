@@ -12,6 +12,8 @@ final class TaskStore {
     private(set) var errorMessage: String?
     private(set) var resolvedBinary: String?
     private(set) var searchPath = ""
+    /// dex was found, but it is older than the CLI this app speaks.
+    private(set) var cliTooOld = false
 
     var selection: String?
     var query = ""
@@ -78,6 +80,11 @@ final class TaskStore {
         resolvedBinary = await client.bootstrap(override: Preferences.dexPath)
         await client.setStoragePath(Preferences.storagePath)
         searchPath = await client.searchPath
+        if resolvedBinary != nil {
+            cliTooOld = !(await client.isSupportedVersion())
+        } else {
+            cliTooOld = false
+        }
         isBootstrapping = false
         await reload()
         await startWatching()
@@ -91,7 +98,7 @@ final class TaskStore {
     }
 
     private func startWatching() async {
-        let directory = await client.tasksDirectory()
+        let directory = await client.storageDirectory()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let watcher = TaskWatcher(directory: directory) { [weak self] in
             Task { @MainActor in await self?.reload(quietly: true) }
@@ -139,9 +146,24 @@ final class TaskStore {
         }
     }
 
-    func complete(_ id: String, result: String) async {
+    func complete(_ id: String, result: String, commit: String? = nil) async {
         await perform {
-            try await self.client.complete(id, result: result)
+            try await self.client.complete(id, result: result, commit: commit)
+            await self.reload(quietly: true)
+        }
+    }
+
+    func start(_ id: String) async {
+        await perform {
+            try await self.client.start(id)
+            await self.reload(quietly: true)
+        }
+    }
+
+    func archive(_ id: String) async {
+        await perform {
+            try await self.client.archive(id)
+            if self.selection == id { self.selection = nil }
             await self.reload(quietly: true)
         }
     }
@@ -202,6 +224,16 @@ enum Preferences {
     static var sort: SortField {
         get { defaults.string(forKey: "sort").flatMap(SortField.init) ?? .priority }
         set { defaults.set(newValue.rawValue, forKey: "sort") }
+    }
+
+    static var linearIncludeDone: Bool {
+        get { defaults.bool(forKey: "linearIncludeDone") }
+        set { defaults.set(newValue, forKey: "linearIncludeDone") }
+    }
+
+    static var source: String? {
+        get { defaults.string(forKey: "source") }
+        set { defaults.set(newValue, forKey: "source") }
     }
 
     static var showCompleted: Bool {

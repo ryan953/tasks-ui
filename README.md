@@ -1,13 +1,15 @@
 # Dex Tasks
 
-A native macOS app for [`dex`](https://www.npmjs.com/package/@zeeg/dex) tasks. Tasks
-on the left, the task you picked on the right, and everything editable in place.
+A native macOS app for your work in one window: [`dex`](https://www.npmjs.com/package/@zeeg/dex)
+tasks and the Linear issues and projects assigned to you. List on the left, the
+thing you picked on the right, editable in place.
 
-| Sidebar | Detail |
+| dex tasks | Linear |
 | --- | --- |
-| ![Task list](docs/sidebar.png) | ![Task detail](docs/detail.png) |
+| ![Task list](docs/sidebar.png) | ![Linear list](docs/linear-sidebar.png) |
+| ![Task detail](docs/detail.png) | ![Linear issue](docs/linear-issue.png) |
 
-## What it does
+## dex tasks
 
 - **Browse** the task tree, with subtasks nested under their parent and a
   `done/total` count on every branch.
@@ -20,8 +22,42 @@ on the left, the task you picked on the right, and everything editable in place.
 - **Edit dependencies**: add and remove blockers, and reparent a task. The pickers
   leave out anything that would make a cycle, so `dex` never has to reject it.
 - **Mark as done** with a result, and reopen a task you finished too early.
+- **Start** a task, complete it with a result (and optionally a commit SHA), reopen
+  one you finished too early, and archive what is done.
 - **Follow along**: the window refreshes when anything else changes a task, so the
   CLI or an agent editing the same store shows up immediately.
+
+## Linear
+
+Switch the source at the top of the sidebar.
+
+- **Assigned to me**: the issues assigned to you and the projects you lead or belong
+  to, without opening a browser.
+- **Edit in passing**: an issue's title, description, priority and status; a
+  project's name, description and target date.
+- **Link out for the rest.** Linear has far more depth than this app should copy.
+  Every issue and project opens on the website with one click, and the toolbar links
+  to the bulk views — **My Issues**, **Created by Me**, **All Projects**, and a Linear
+  search pre-filled with whatever you typed in the sidebar.
+
+Connect it in **Settings → Linear** with a personal API key from
+linear.app → Settings → Security & access. The key is kept in your login keychain,
+never in preferences.
+
+## Links
+
+The app registers the `task://` scheme, so a link opens the app and selects the item:
+
+| Link | Opens |
+| --- | --- |
+| `task://dex/4cmymvmd` | that dex task |
+| `task://4cmymvmd` | the same, shorthand |
+| `task://linear/ABC-12` | that Linear issue |
+| `task://linear/project/<id>` | that Linear project |
+
+Try it with `open "task://dex/<some-id>"`. macOS registers the scheme the first time
+it sees the app, so move it to `/Applications` and launch it once before relying on
+links. A link to something not currently loaded says so rather than doing nothing.
 
 ## Install
 
@@ -35,12 +71,19 @@ needs **right-click → Open**, or:
 xattr -dr com.apple.quarantine "/Applications/Dex Tasks.app"
 ```
 
-Requires macOS 14 or later and the [`dex`](https://www.npmjs.com/package/@zeeg/dex)
-CLI:
+Requires macOS 14 or later and [`dex`](https://www.npmjs.com/package/@zeeg/dex)
+**0.16 or newer**:
 
 ```sh
 npm install -g @zeeg/dex
 ```
+
+dex 0.16 renamed the task fields (the old `description` became `name`, the old
+`context` became `description`) and moved storage from `tasks/<id>.json` to a single
+`tasks.jsonl`. dex migrates an older store on first run and leaves the previous
+directory behind as `tasks.bak`. The app reads both shapes, so a store written by an
+older dex still displays correctly, but it needs the 0.16 command line to make
+changes — and says so plainly if it finds an older one.
 
 ## How it talks to dex
 
@@ -92,7 +135,10 @@ artwork is kept in the repository.
 
 - `Tests/DexKitTests` — decoding, argument building, the task tree, and an
   integration suite that drives the real `dex` binary against a temporary store
-  (skipped when `dex` is not installed).
+  (skipped when `dex` is not installed). Set `DEX_UI_TEST_BIN` to test against a
+  specific dex without disturbing the one on your PATH.
+- `Tests/LinearKitTests` — the GraphQL layer against recorded responses, through an
+  injectable transport, so no network or workspace is involved.
 - `Tests/DexUITests` — renders the real views into an offscreen window and writes
   PNGs to `.build/snapshots`, so a layout regression is visible rather than
   described.

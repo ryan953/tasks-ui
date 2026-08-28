@@ -1,22 +1,26 @@
 import DexKit
+import LinearKit
 import SwiftUI
 
 @main
 struct DexUIApp: App {
-    @State private var store = TaskStore()
+    @State private var model = AppModel()
     @State private var isCreating = false
 
     var body: some Scene {
-        WindowGroup("Dex Tasks") {
-            ContentView(store: store, isCreating: $isCreating)
-                .frame(minWidth: 820, minHeight: 480)
-                .task { await store.bootstrap() }
+        WindowGroup("Tasks") {
+            ContentView(model: model, isCreating: $isCreating)
+                .frame(minWidth: 860, minHeight: 480)
+                .task { await model.bootstrap() }
+                // Registered for the `task` scheme in Info.plist, so
+                // `task://dex/<id>` opens the app and selects that task.
+                .onOpenURL { url in model.open(url) }
         }
-        .defaultSize(width: 1080, height: 720)
+        .defaultSize(width: 1120, height: 740)
         .commands { menuCommands }
 
         Settings {
-            SettingsView(store: store)
+            SettingsView(model: model)
         }
     }
 
@@ -25,17 +29,21 @@ struct DexUIApp: App {
         CommandGroup(replacing: .newItem) {
             Button("New Task") { isCreating = true }
                 .keyboardShortcut("n")
+                .disabled(model.source != .dex)
         }
         CommandGroup(after: .toolbar) {
-            Button("Refresh") { Task { await store.reload() } }
-                .keyboardShortcut("r")
-            Divider()
-            Picker("Show", selection: Binding(get: { store.filter }, set: { store.filter = $0 })) {
-                ForEach(StatusFilter.allCases) { Text($0.label).tag($0) }
+            Picker("Source", selection: Binding(get: { model.source }, set: { model.source = $0 })) {
+                ForEach(Source.allCases) { Text($0.label).tag($0) }
             }
-            Picker("Sort By", selection: Binding(get: { store.sort }, set: { store.sort = $0 })) {
-                ForEach(SortField.allCases) { Text($0.label).tag($0) }
+            Button("Refresh") {
+                Task {
+                    switch model.source {
+                    case .dex: await model.dex.reload()
+                    case .linear: await model.linear.reload()
+                    }
+                }
             }
+            .keyboardShortcut("r")
         }
     }
 }

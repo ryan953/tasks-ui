@@ -7,12 +7,32 @@ struct TaskIndexTests {
     /// epic ─ ready, blocked (blocked by ready), done
     static func fixture() -> TaskIndex {
         TaskIndex(tasks: [
-            DexTask(id: "epic", description: "Epic", priority: 1, children: ["ready", "blocked", "done"]),
-            DexTask(id: "ready", parentID: "epic", description: "Ready work", priority: 2, blocks: ["blocked"]),
-            DexTask(id: "blocked", parentID: "epic", description: "Blocked work", priority: 1, blockedBy: ["ready"]),
-            DexTask(id: "done", parentID: "epic", description: "Finished work", priority: 3, completed: true),
-            DexTask(id: "loose", description: "No parent", priority: 4),
+            DexTask(id: "epic", name: "Epic", priority: 1, children: ["ready", "blocked", "done"]),
+            DexTask(id: "ready", parentID: "epic", name: "Ready work", priority: 2, blocks: ["blocked"]),
+            DexTask(id: "blocked", parentID: "epic", name: "Blocked work", priority: 1, blockedBy: ["ready"]),
+            DexTask(id: "done", parentID: "epic", name: "Finished work", priority: 3, completed: true),
+            DexTask(id: "loose", name: "No parent", priority: 4),
         ])
+    }
+
+    /// A started task reads as in progress, but a blocker outranks that: a started
+    /// task whose blocker reopened is a problem to surface, not to hide.
+    @Test func startedTasksReadAsInProgressUnlessBlocked() {
+        var tasks = Self.fixture().tasks
+        tasks[1].startedAt = Date()   // "ready" -> started
+        tasks[2].startedAt = Date()   // "blocked" -> started, but still blocked
+        let index = TaskIndex(tasks: tasks)
+        #expect(index.state(of: index["ready"]!) == .inProgress)
+        #expect(index.state(of: index["blocked"]!) == .blocked)
+    }
+
+    @Test func filtersInProgress() {
+        var tasks = Self.fixture().tasks
+        tasks[1].startedAt = Date()
+        let index = TaskIndex(tasks: tasks)
+        let ids = TaskIndex.flatten(index.outline(filter: .inProgress)).map(\.id)
+        #expect(ids.contains("ready"))
+        #expect(!ids.contains("done"))
     }
 
     @Test func classifiesStates() {
@@ -33,7 +53,7 @@ struct TaskIndexTests {
 
     /// dex cleans up references on delete, but a hand-edited store can dangle.
     @Test func ignoresBlockersThatNoLongerExist() {
-        let index = TaskIndex(tasks: [DexTask(id: "a", description: "A", blockedBy: ["ghost"])])
+        let index = TaskIndex(tasks: [DexTask(id: "a", name: "A", blockedBy: ["ghost"])])
         #expect(index.state(of: index["a"]!) == .ready)
     }
 
@@ -68,7 +88,7 @@ struct TaskIndexTests {
 
     @Test func searchLooksInsideContextAndID() {
         let index = TaskIndex(tasks: [
-            DexTask(id: "zz11", description: "Nothing", context: "mentions bcrypt here"),
+            DexTask(id: "zz11", name: "Nothing", details: "mentions bcrypt here"),
         ])
         #expect(!index.outline(query: "bcrypt").isEmpty)
         #expect(!index.outline(query: "zz11").isEmpty)
@@ -81,13 +101,13 @@ struct TaskIndexTests {
 
     /// A task pointing at a parent that was filtered out of the list still shows.
     @Test func orphanBecomesARoot() {
-        let index = TaskIndex(tasks: [DexTask(id: "kid", parentID: "gone", description: "Orphan")])
+        let index = TaskIndex(tasks: [DexTask(id: "kid", parentID: "gone", name: "Orphan")])
         #expect(index.outline().map(\.id) == ["kid"])
     }
 
     @Test func sortsByEachField() {
         let index = Self.fixture()
-        let alpha = index.sorted(index.tasks, by: .alpha).map(\.description)
+        let alpha = index.sorted(index.tasks, by: .alpha).map(\.name)
         #expect(alpha == ["Blocked work", "Epic", "Finished work", "No parent", "Ready work"])
         #expect(index.sorted(index.tasks, by: .priority).first?.id == "epic")
     }
@@ -139,8 +159,11 @@ struct ConfigTests {
         #expect(DexConfig.expandTilde("/abs") == "/abs")
     }
 
-    @Test func tasksDirectoryHangsOffStorage() {
-        #expect(DexConfig.tasksDirectory(storagePath: "/tmp/store").path == "/tmp/store/tasks")
+    /// dex 0.16 keeps every task on one line of tasks.jsonl, replacing the
+    /// tasks/<id>.json directory older versions wrote.
+    @Test func tasksFileHangsOffStorage() {
+        #expect(DexConfig.tasksFile(storagePath: "/tmp/store").path == "/tmp/store/tasks.jsonl")
+        #expect(DexConfig.storageDirectory(storagePath: "/tmp/store").path == "/tmp/store")
     }
 }
 
@@ -172,11 +195,27 @@ struct ShellEnvironmentTests {
     }
 
     @Test func mergeKeepsShellOrderAndDropsDuplicates() {
-        let merged = ShellEnvironment.merge("/my/bin:/usr/bin:/my/bin")
+        let merged = ShellEnvironment.merge("/my/bin:/usr/bin:/my/bin", inherited: "")
         let parts = merged.split(separator: ":").map(String.init)
         #expect(parts.first == "/my/bin")
         #expect(parts.filter { $0 == "/my/bin" }.count == 1)
         #expect(parts.contains("/opt/homebrew/bin"))
+    }
+
+    /// `zsh -l` rebuilds PATH via path_helper and can drop a directory this process
+    /// was launched with, so the inherited PATH has to be merged back in.
+    @Test func mergeKeepsDirectoriesOnlyTheProcessKnew() {
+        let merged = ShellEnvironment.merge("/usr/bin", inherited: "/tool/cache/node/bin:/usr/bin")
+        #expect(merged.contains("/tool/cache/node/bin"))
+        // The shell's own entries still come first.
+        #expect(merged.hasPrefix("/usr/bin:"))
+    }
+
+    /// A shell probe that fails entirely must still yield a usable PATH.
+    @Test func mergeSurvivesAnEmptyShellAnswer() {
+        let merged = ShellEnvironment.merge("", inherited: "/some/bin")
+        #expect(merged.contains("/some/bin"))
+        #expect(merged.contains("/opt/homebrew/bin"))
     }
 
     /// Regression guard for the bug that makes a launched .app show no tasks: dex is

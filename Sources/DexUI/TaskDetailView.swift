@@ -12,7 +12,7 @@ struct TaskDetailView: View {
     @State private var isConfirmingDelete = false
     @FocusState private var focus: Field?
 
-    private enum Field { case description, context }
+    private enum Field { case name, details }
 
     init(store: TaskStore, task: DexTask, newTaskParent: Binding<String?>, isCreating: Binding<Bool>) {
         self.store = store
@@ -27,7 +27,7 @@ struct TaskDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
                 Divider()
-                contextEditor
+                detailsEditor
                 fields
                 RelationsView(store: store, task: task)
                 if task.completed { resultSection }
@@ -42,12 +42,12 @@ struct TaskDetailView: View {
         .safeAreaInset(edge: .bottom) { if isDirty { saveBar } }
         .toolbar { toolbarItems }
         .sheet(isPresented: $isCompleting) {
-            CompleteSheet(task: task) { result in
-                Task { await store.complete(task.id, result: result) }
+            CompleteSheet(task: task) { result, commit in
+                Task { await store.complete(task.id, result: result, commit: commit) }
             }
         }
         .confirmationDialog(
-            "Delete “\(task.description)”?",
+            "Delete “\(task.name)”?",
             isPresented: $isConfirmingDelete,
             titleVisibility: .visible
         ) {
@@ -69,11 +69,11 @@ struct TaskDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TextField("Task description", text: $draft.description, axis: .vertical)
+            TextField("Task name", text: $draft.name, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.title2.weight(.semibold))
                 .lineLimit(1...4)
-                .focused($focus, equals: .description)
+                .focused($focus, equals: .name)
 
             HStack(spacing: 8) {
                 StateBadge(state: store.index.state(of: task))
@@ -89,10 +89,10 @@ struct TaskDetailView: View {
 
     // MARK: - Editors
 
-    private var contextEditor: some View {
+    private var detailsEditor: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SectionLabel("Context")
-            TextEditor(text: $draft.context)
+            SectionLabel("Description")
+            TextEditor(text: $draft.details)
                 .font(.system(.body, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .padding(8)
@@ -102,9 +102,9 @@ struct TaskDetailView: View {
                     RoundedRectangle(cornerRadius: 7)
                         .stroke(Color(nsColor: .separatorColor))
                 )
-                .focused($focus, equals: .context)
+                .focused($focus, equals: .details)
                 .overlay(alignment: .topLeading) {
-                    if draft.context.isEmpty {
+                    if draft.details.isEmpty {
                         Text("Requirements, approach, done criteria…")
                             .foregroundStyle(.tertiary)
                             .padding(.horizontal, 13)
@@ -154,6 +154,7 @@ struct TaskDetailView: View {
     private var timestamps: some View {
         HStack(spacing: 16) {
             if let created = task.createdAt { Stamp(label: "Created", date: created) }
+            if let started = task.startedAt { Stamp(label: "Started", date: started) }
             if let updated = task.updatedAt { Stamp(label: "Updated", date: updated) }
             if let completed = task.completedAt { Stamp(label: "Completed", date: completed) }
         }
@@ -175,7 +176,7 @@ struct TaskDetailView: View {
             Button("Save Changes") { save() }
                 .keyboardShortcut("s")
                 .buttonStyle(.borderedProminent)
-                .disabled(draft.description.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(draft.name.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 10)
@@ -210,6 +211,16 @@ struct TaskDetailView: View {
             .help("Delete this task")
         }
         ToolbarItem {
+            if !task.completed, store.index.state(of: task) != .inProgress {
+                Button {
+                    Task { await store.start(task.id) }
+                } label: {
+                    Label("Start", systemImage: "play.circle")
+                }
+                .help("Mark this task as in progress")
+            }
+        }
+        ToolbarItem {
             if task.completed {
                 Button {
                     Task { await store.reopen(task.id) }
@@ -232,15 +243,15 @@ struct TaskDetailView: View {
 
 /// The editable fields, so "what changed" is a value comparison.
 private struct Draft: Equatable {
-    var description: String
-    var context: String
+    var name: String
+    var details: String
     var priority: Int
     /// Empty means no parent.
     var parentID: String
 
     init(task: DexTask) {
-        description = task.description
-        context = task.context ?? ""
+        name = task.name
+        details = task.details ?? ""
         priority = task.priority
         parentID = task.parentID ?? ""
     }
@@ -249,8 +260,8 @@ private struct Draft: Equatable {
     /// the flags it is handed and leaves the rest alone.
     func edit(from task: DexTask) -> TaskEdit {
         var edit = TaskEdit()
-        if description != task.description { edit.description = description }
-        if context != (task.context ?? "") { edit.context = context }
+        if name != task.name { edit.name = name }
+        if details != (task.details ?? "") { edit.details = details }
         if priority != task.priority { edit.priority = priority }
         if parentID != (task.parentID ?? ""), !parentID.isEmpty { edit.parentID = parentID }
         return edit
@@ -273,7 +284,7 @@ struct StateBadge: View {
     let state: TaskState
 
     var body: some View {
-        Label(state.rawValue.capitalized, systemImage: state.symbol)
+        Label(state.label, systemImage: state.symbol)
             .font(.caption.weight(.medium))
             .foregroundStyle(tint)
             .padding(.horizontal, 7)
@@ -284,8 +295,9 @@ struct StateBadge: View {
     private var tint: Color {
         switch state {
         case .completed: .green
+        case .inProgress: .blue
         case .blocked: .orange
-        case .ready: .blue
+        case .ready: .secondary
         }
     }
 }
