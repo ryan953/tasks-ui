@@ -36,8 +36,16 @@ struct ContentView: View {
             }
             .navigationSplitViewColumnWidth(min: 280, ideal: 330, max: 460)
         } detail: {
-            detail
-                .frame(minWidth: 420)
+            VStack(spacing: 0) {
+                // Reads work against an older dex, but every write is rejected. Say
+                // so up front rather than letting the first save fail with a raw
+                // "Unknown option" from the CLI.
+                if model.source == .dex, dex.cliTooOld {
+                    UpgradeBanner()
+                }
+                detail
+            }
+            .frame(minWidth: 420)
         }
         .sheet(isPresented: $isCreating) {
             NewTaskSheet(store: dex, parentID: newTaskParent)
@@ -101,6 +109,25 @@ struct ContentView: View {
                 LinearEmptyDetail(store: linear)
             }
         }
+    }
+}
+
+private struct UpgradeBanner: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            Text("dex is older than 0.16, so tasks are read-only. Upgrade with")
+                .font(.callout)
+            Text("npm install -g @zeeg/dex")
+                .font(.callout.monospaced())
+                .textSelection(.enabled)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(Color.orange.opacity(0.13))
+        .overlay(alignment: .bottom) { Divider() }
     }
 }
 
