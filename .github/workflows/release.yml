@@ -57,6 +57,10 @@ jobs:
       - name: Write the release notes
         run: |
           cat > notes.md <<'NOTES'
+          A native macOS app for your work in one window: [dex](https://www.npmjs.com/package/@zeeg/dex)
+          tasks, and the Linear issues and projects assigned to you. List on the
+          left, the thing you picked on the right, editable in place.
+
           ## Install
 
           1. Download the zip, unzip it, and drag **Tasks.app** to `/Applications`.
@@ -67,7 +71,28 @@ jobs:
              xattr -dr com.apple.quarantine "/Applications/Tasks.app"
              ```
 
-          Requires macOS 14 or later, and the `dex` CLI on your `PATH`.
+          Launch it once from `/Applications` so macOS registers the `task://`
+          links.
+
+          ## Requirements
+
+          - macOS 14 or later. The build is universal, so it runs natively on both
+            Apple silicon and Intel.
+          - `dex` **0.16 or newer** on your `PATH`: `npm install -g @zeeg/dex`.
+            Older stores are still readable, but writing needs the 0.16 command
+            line, and the app says so plainly if it finds an older one.
+          - Linear is optional. If the [`linear` CLI](https://github.com/schpet/linear-cli)
+            is installed and logged in, its key is used automatically; otherwise add
+            a personal API key in Settings. Either way it is kept in your keychain.
+
+          ## Links
+
+          | Link | Opens |
+          | --- | --- |
+          | `task://dex/<id>` | that dex task |
+          | `task://<id>` | the same, shorthand |
+          | `task://linear/ABC-12` | that Linear issue |
+          | `task://linear/project/<id>` | that Linear project |
           NOTES
 
       - name: Publish the release
