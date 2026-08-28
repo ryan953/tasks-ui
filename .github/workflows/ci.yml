@@ -29,6 +29,22 @@ jobs:
       - name: Install dex
         run: npm install -g @zeeg/dex
 
+      # Temporary: every dex call timed out on the runner while taking 0.3s
+      # locally. Find out what it is doing before guessing at a fix.
+      - name: Diagnose dex on the runner
+        run: |
+          set -x
+          which dex
+          dex --help >/dev/null && echo "help ok"
+          time (dex --storage-path /tmp/diag create -n "probe" --description "d" || echo "CREATE FAILED $?")
+          time (dex --storage-path /tmp/diag list --json || echo "LIST FAILED $?")
+          echo "--- with stdin closed, as the app runs it ---"
+          time (dex --storage-path /tmp/diag2 create -n "probe2" --description "d" < /dev/null || echo "FAILED $?")
+          echo "--- git context ---"
+          git rev-parse --show-toplevel || true
+          git remote -v || true
+        timeout-minutes: 5
+
       - name: Build
         run: swift build --build-tests
 
