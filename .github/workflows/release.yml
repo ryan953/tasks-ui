@@ -45,26 +45,26 @@ jobs:
         run: Scripts/bundle.sh --version "${{ steps.version.outputs.version }}" --universal
 
       - name: Check the binary is universal
-        run: lipo -info "dist/Dex Tasks.app/Contents/MacOS/DexUI"
+        run: lipo -info "dist/Tasks.app/Contents/MacOS/Tasks"
 
       - name: Zip the app
         run: |
           cd dist
           # ditto keeps the bundle's resource forks and symlinks; `zip` does not.
-          ditto -c -k --sequesterRsrc --keepParent "Dex Tasks.app" \
-            "DexTasks-${{ steps.version.outputs.version }}-macos-universal.zip"
+          ditto -c -k --sequesterRsrc --keepParent "Tasks.app" \
+            "Tasks-${{ steps.version.outputs.version }}-macos-universal.zip"
 
       - name: Write the release notes
         run: |
           cat > notes.md <<'NOTES'
           ## Install
 
-          1. Download the zip, unzip it, and drag **Dex Tasks.app** to `/Applications`.
+          1. Download the zip, unzip it, and drag **Tasks.app** to `/Applications`.
           2. This build is not signed with an Apple Developer certificate, so the
              first launch needs **right-click → Open** (once), or:
 
              ```
-             xattr -dr com.apple.quarantine "/Applications/Dex Tasks.app"
+             xattr -dr com.apple.quarantine "/Applications/Tasks.app"
              ```
 
           Requires macOS 14 or later, and the `dex` CLI on your `PATH`.
@@ -76,13 +76,13 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
-          ASSET="dist/DexTasks-${VERSION}-macos-universal.zip"
+          ASSET="dist/Tasks-${VERSION}-macos-universal.zip"
           # Re-running the workflow for an existing tag should refresh the asset
           # rather than fail outright.
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ASSET" --clobber
           else
             gh release create "$TAG" "$ASSET" \
-              --title "Dex Tasks ${VERSION}" \
+              --title "Tasks ${VERSION}" \
               --notes-file notes.md
           fi

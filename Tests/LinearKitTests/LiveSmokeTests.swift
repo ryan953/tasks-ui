@@ -42,8 +42,23 @@ struct LiveSmokeTests {
         LinearClient(apiKey: try #require(LinearProbe.token))
     }
 
+    /// Run a live query, treating a connectivity failure as nothing to report.
+    ///
+    /// These tests check that Linear still accepts the queries as written. A dropped
+    /// connection says nothing about that, and failing the whole suite over one
+    /// would train everyone to ignore it.
+    private func live<T>(_ work: () async throws -> T) async throws -> T? {
+        do {
+            return try await work()
+        } catch let error as LinearError {
+            if case .network = error { return nil }
+            if case .rateLimited = error { return nil }
+            throw error
+        }
+    }
+
     @Test func readsTheAccount() async throws {
-        let account = try await client().account()
+        guard let account = try await live({ try await client().account() }) else { return }
         #expect(!account.user.name.isEmpty)
         // The slug is what every "open in Linear" link is built from.
         #expect(!account.urlKey.isEmpty)
@@ -51,7 +66,8 @@ struct LiveSmokeTests {
 
     /// The assignee filter and the state exclusion have to be accepted as written.
     @Test func readsAssignedIssues() async throws {
-        let issues = try await client().myIssues(includeDone: false)
+        guard let issues = try await live({ try await client().myIssues(includeDone: false) })
+        else { return }
         for issue in issues {
             #expect(!issue.identifier.isEmpty)
             #expect(issue.url.hasPrefix("https://"))
@@ -63,7 +79,7 @@ struct LiveSmokeTests {
 
     /// The `members` filter is the part most likely to be rejected by a workspace.
     @Test func readsMyProjects() async throws {
-        let projects = try await client().myProjects()
+        guard let projects = try await live({ try await client().myProjects() }) else { return }
         for project in projects {
             #expect(!project.name.isEmpty)
             #expect(project.url.hasPrefix("https://"))
@@ -73,7 +89,8 @@ struct LiveSmokeTests {
     /// Every state and priority the workspace actually uses must decode. An unknown
     /// value silently becoming "Todo" or "No priority" would be quietly wrong.
     @Test func decodesEveryStateAndPriorityInUse() async throws {
-        let issues = try await client().myIssues(includeDone: true)
+        guard let issues = try await live({ try await client().myIssues(includeDone: true) })
+        else { return }
         // A raw fetch would fail to build a LinearIssue for an unknown state type,
         // so a non-empty result proves each one mapped.
         for issue in issues {
@@ -85,9 +102,10 @@ struct LiveSmokeTests {
     /// The status picker is empty unless a team's workflow states load.
     @Test func readsWorkflowStatesForATeam() async throws {
         let client = try client()
-        let issues = try await client.myIssues(includeDone: true)
-        guard let teamID = issues.compactMap({ $0.team?.id }).first else { return }
-        let states = try await client.workflowStates(teamID: teamID)
+        guard let issues = try await live({ try await client.myIssues(includeDone: true) }),
+              let teamID = issues.compactMap({ $0.team?.id }).first,
+              let states = try await live({ try await client.workflowStates(teamID: teamID) })
+        else { return }
         #expect(!states.isEmpty)
     }
 }

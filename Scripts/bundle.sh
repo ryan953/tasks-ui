@@ -10,7 +10,9 @@ cd "$ROOT"
 VERSION="0.0.0-dev"
 OUTPUT="dist"
 ARCH_FLAGS=()
-APP_NAME="Dex Tasks"
+APP_NAME="Tasks"
+# The SwiftPM product is still called DexUI; the shipped executable is not.
+EXECUTABLE_NAME="Tasks"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -35,8 +37,9 @@ echo "==> Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-cp "$BINARY" "$APP/Contents/MacOS/DexUI"
-sed "s/__VERSION__/$VERSION/g" Resources/Info.plist > "$APP/Contents/Info.plist"
+cp "$BINARY" "$APP/Contents/MacOS/$EXECUTABLE_NAME"
+sed -e "s/__VERSION__/$VERSION/g" -e "s/__EXECUTABLE__/$EXECUTABLE_NAME/g" \
+  Resources/Info.plist > "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 if "$ROOT/Scripts/make-icon.sh" "$APP/Contents/Resources/AppIcon.icns"; then

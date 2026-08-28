@@ -1,4 +1,4 @@
-# Dex Tasks
+# Tasks
 
 A native macOS app for your work in one window: [`dex`](https://www.npmjs.com/package/@zeeg/dex)
 tasks and the Linear issues and projects assigned to you. List on the left, the
@@ -68,13 +68,13 @@ links. A link to something not currently loaded says so rather than doing nothin
 ## Install
 
 Download the zip from [Releases](../../releases), unzip it, and drag
-**Dex Tasks.app** to `/Applications`.
+**Tasks.app** to `/Applications`.
 
 The build is not signed with an Apple Developer certificate, so the first launch
 needs **right-click → Open**, or:
 
 ```sh
-xattr -dr com.apple.quarantine "/Applications/Dex Tasks.app"
+xattr -dr com.apple.quarantine "/Applications/Tasks.app"
 ```
 
 Requires macOS 14 or later and [`dex`](https://www.npmjs.com/package/@zeeg/dex)
@@ -130,7 +130,7 @@ one.
 ```sh
 swift build            # debug
 swift test             # unit, integration and view-snapshot suites
-Scripts/bundle.sh      # dist/Dex Tasks.app
+Scripts/bundle.sh      # dist/Tasks.app
 Scripts/bundle.sh --version 1.2.3 --universal
 ```
 
