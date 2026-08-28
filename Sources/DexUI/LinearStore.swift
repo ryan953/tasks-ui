@@ -31,14 +31,23 @@ final class LinearStore {
         }
     }
 
-    private let client = LinearClient()
+    private let client: LinearClient
 
-    init() {
+    init(client: LinearClient = LinearClient()) {
+        self.client = client
         includeDone = Preferences.linearIncludeDone
+    }
+
+    /// Drive the store against a stub transport, for tests.
+    init(client: LinearClient, hasKey: Bool) {
+        self.client = client
+        includeDone = false
+        self.hasKey = hasKey
     }
 
     /// Seed without touching the network, for previews and snapshot tests.
     init(issues: [LinearIssue], projects: [LinearProject] = [], selection: LinearSelection? = nil) {
+        client = LinearClient()
         includeDone = false
         self.issues = issues
         self.projects = projects
@@ -124,25 +133,47 @@ final class LinearStore {
         return await reload()
     }
 
+    /// Reload the account, issues and projects.
+    ///
+    /// The three calls are reported separately and a failure in one does not discard
+    /// the others: the projects filter is the part most likely to be rejected by a
+    /// given workspace, and losing the issue list over it would be a poor trade.
+    /// The message names the call that failed, so an error is actionable.
     @discardableResult
     func reload() async -> Bool {
         guard hasKey else { return false }
         isLoading = true
         defer { isLoading = false }
+
+        var failures: [String] = []
+
         do {
             account = try await client.account()
-            // Issues and projects are independent; fetch both before reporting.
-            async let fetchedIssues = client.myIssues(includeDone: includeDone)
-            async let fetchedProjects = client.myProjects()
-            issues = try await fetchedIssues
-            projects = try await fetchedProjects
-            errorMessage = nil
-            if let selection, resolve(selection) == nil { self.selection = nil }
-            return true
         } catch {
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            // Without an account nothing else will work either, so stop here.
+            errorMessage = "Signing in to Linear failed.\n\(describe(error))"
             return false
         }
+
+        do {
+            issues = try await client.myIssues(includeDone: includeDone)
+        } catch {
+            failures.append("Loading your issues failed.\n\(describe(error))")
+        }
+
+        do {
+            projects = try await client.myProjects()
+        } catch {
+            failures.append("Loading your projects failed.\n\(describe(error))")
+        }
+
+        if let selection, resolve(selection) == nil { self.selection = nil }
+        errorMessage = failures.isEmpty ? nil : failures.joined(separator: "\n\n")
+        return failures.isEmpty
+    }
+
+    private func describe(_ error: Error) -> String {
+        (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 
     private func resolve(_ selection: LinearSelection) -> Bool? {
