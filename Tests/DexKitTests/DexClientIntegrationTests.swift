@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import DexKit
 
 /// Drives the real `dex` binary against a throwaway store.
@@ -150,7 +151,8 @@ struct DexClientIntegrationTests {
         // Add a field the app's model knows nothing about.
         let file = await client.tasksFile()
         let original = try String(contentsOf: file, encoding: .utf8)
-        let doctored = original
+        let doctored =
+            original
             .split(separator: "\n", omittingEmptySubsequences: true)
             .map { line -> String in
                 guard line.contains("\"id\":\"\(target)\"") else { return String(line) }
@@ -249,7 +251,8 @@ enum DexProbe {
         if let binaryOverride, FileManager.default.isExecutableFile(atPath: binaryOverride) {
             return true
         }
-        let path = (ProcessInfo.processInfo.environment["PATH"] ?? "")
+        let path =
+            (ProcessInfo.processInfo.environment["PATH"] ?? "")
             + ":" + ShellEnvironment.fallbackPaths.joined(separator: ":")
         return ExecutableLocator.find(in: path) != nil
     }()

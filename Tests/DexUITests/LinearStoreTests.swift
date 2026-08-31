@@ -1,6 +1,7 @@
 import Foundation
 import LinearKit
 import Testing
+
 @testable import DexUI
 
 /// Minimal stand-in so the store can be driven without a workspace.
@@ -22,15 +23,15 @@ private actor ScriptedTransport: LinearTransport {
 }
 
 private let accountJSON = """
-{"data":{"viewer":{"id":"u","name":"Sam Rivers"},"organization":{"urlKey":"acme","name":"Acme"}}}
-"""
+    {"data":{"viewer":{"id":"u","name":"Sam Rivers"},"organization":{"urlKey":"acme","name":"Acme"}}}
+    """
 
 private let issuesJSON = """
-{"data":{"issues":{"pageInfo":{"hasNextPage":false},"nodes":[
-  {"id":"i1","identifier":"ABC-1","title":"Still here","priority":0,"url":"u",
-   "state":{"id":"s","name":"Todo","type":"unstarted"}}
-]}}}
-"""
+    {"data":{"issues":{"pageInfo":{"hasNextPage":false},"nodes":[
+      {"id":"i1","identifier":"ABC-1","title":"Still here","priority":0,"url":"u",
+       "state":{"id":"s","name":"Todo","type":"unstarted"}}
+    ]}}}
+    """
 
 @MainActor
 @Suite("Linear store")
@@ -57,7 +58,7 @@ struct LinearStoreTests {
     /// A bad key is not a per-query problem; say so once and stop.
     @Test func aSignInFailureStopsEarly() async {
         let transport = ScriptedTransport(byOperation: [
-            "query Viewer": #"{"errors":[{"message":"Authentication required"}]}"#,
+            "query Viewer": #"{"errors":[{"message":"Authentication required"}]}"#
         ])
         let store = LinearStore(client: LinearClient(transport: transport, apiKey: "bad"), hasKey: true)
 
@@ -88,12 +89,15 @@ struct LinearStoreTests {
     /// round — Linear encodes "none" as 0.
     @Test func sortsUrgentFirstAndNoPriorityLast() {
         let store = LinearStore(issues: [
-            LinearIssue(id: "a", identifier: "A-1", title: "None", priority: .none,
-                        state: LinearState(id: "s", name: "Todo", type: .unstarted), url: "u"),
-            LinearIssue(id: "b", identifier: "A-2", title: "Urgent", priority: .urgent,
-                        state: LinearState(id: "s", name: "Todo", type: .unstarted), url: "u"),
-            LinearIssue(id: "c", identifier: "A-3", title: "Low", priority: .low,
-                        state: LinearState(id: "s", name: "Todo", type: .unstarted), url: "u"),
+            LinearIssue(
+                id: "a", identifier: "A-1", title: "None", priority: .none,
+                state: LinearState(id: "s", name: "Todo", type: .unstarted), url: "u"),
+            LinearIssue(
+                id: "b", identifier: "A-2", title: "Urgent", priority: .urgent,
+                state: LinearState(id: "s", name: "Todo", type: .unstarted), url: "u"),
+            LinearIssue(
+                id: "c", identifier: "A-3", title: "Low", priority: .low,
+                state: LinearState(id: "s", name: "Todo", type: .unstarted), url: "u"),
         ])
         #expect(store.filteredIssues.map(\.title) == ["Urgent", "Low", "None"])
     }
@@ -101,8 +105,10 @@ struct LinearStoreTests {
     // MARK: - Projects
 
     private static func projects() -> [LinearProject] {
-        func project(_ id: String, _ name: String, _ status: String?, _ type: LinearProjectStatusType?) -> LinearProject {
-            LinearProject(id: id, name: name, statusName: status, statusType: type, url: "https://linear.app/a/project/\(id)")
+        func project(_ id: String, _ name: String, _ status: String?, _ type: LinearProjectStatusType?) -> LinearProject
+        {
+            LinearProject(
+                id: id, name: name, statusName: status, statusType: type, url: "https://linear.app/a/project/\(id)")
         }
         return [
             project("p1", "Shipped thing", "Completed", .completed),
@@ -159,10 +165,12 @@ struct LinearStoreTests {
     /// Grouping uses the workspace's own status names, so two names sharing a type
     /// stay apart rather than being merged into one heading.
     @Test func keepsDistinctStatusNamesApart() {
-        let store = LinearStore(issues: [], projects: [
-            LinearProject(id: "a", name: "One", statusName: "In Review", statusType: .started, url: "u"),
-            LinearProject(id: "b", name: "Two", statusName: "Building", statusType: .started, url: "u"),
-        ])
+        let store = LinearStore(
+            issues: [],
+            projects: [
+                LinearProject(id: "a", name: "One", statusName: "In Review", statusType: .started, url: "u"),
+                LinearProject(id: "b", name: "Two", statusName: "Building", statusType: .started, url: "u"),
+            ])
         #expect(store.projectGroups.map(\.title) == ["Building", "In Review"])
     }
 

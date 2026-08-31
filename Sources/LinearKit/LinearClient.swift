@@ -96,8 +96,8 @@ public actor LinearClient {
     public func account() async throws -> LinearAccount {
         let json = try await perform(query: LinearQueries.viewer, variables: [:])
         guard let viewer = json["viewer"] as? [String: Any],
-              let id = viewer["id"] as? String,
-              let name = viewer["name"] as? String
+            let id = viewer["id"] as? String,
+            let name = viewer["name"] as? String
         else { throw LinearError.decoding("viewer was missing from the response") }
         let org = json["organization"] as? [String: Any]
         let urlKey = org?["urlKey"] as? String ?? ""
@@ -131,7 +131,7 @@ public actor LinearClient {
             issues += nodes.compactMap(Self.issue(from:))
             let pageInfo = connection["pageInfo"] as? [String: Any]
             guard pageInfo?["hasNextPage"] as? Bool == true,
-                  let next = pageInfo?["endCursor"] as? String
+                let next = pageInfo?["endCursor"] as? String
             else { break }
             cursor = next
         }
@@ -139,18 +139,18 @@ public actor LinearClient {
     }
 
     public func myProjects() async throws -> [LinearProject] {
-        let filter = useNarrowProjectFilter
+        let filter =
+            useNarrowProjectFilter
             ? LinearQueries.ledProjectsFilter
             : LinearQueries.myProjectsFilter
         do {
             let json = try await perform(query: LinearQueries.myProjects, variables: ["filter": filter])
             let nodes = (json["projects"] as? [String: Any])?["nodes"] as? [[String: Any]] ?? []
             return nodes.compactMap(Self.project(from:))
-        } catch let LinearError.graphQL(messages) where !useNarrowProjectFilter {
+        } catch LinearError.graphQL where !useNarrowProjectFilter {
             // Some workspaces reject the membership filter. Fall back to projects
             // the user leads rather than showing none at all.
             useNarrowProjectFilter = true
-            _ = messages
             return try await myProjects()
         }
     }
@@ -171,7 +171,7 @@ public actor LinearClient {
             variables: ["id": id, "input": edit.input]
         )
         guard let payload = json["issueUpdate"] as? [String: Any],
-              payload["success"] as? Bool == true
+            payload["success"] as? Bool == true
         else { throw LinearError.decoding("Linear did not confirm the issue update") }
         return (payload["issue"] as? [String: Any]).flatMap(Self.issue(from:))
     }
@@ -184,7 +184,7 @@ public actor LinearClient {
             variables: ["id": id, "input": edit.input]
         )
         guard let payload = json["projectUpdate"] as? [String: Any],
-              payload["success"] as? Bool == true
+            payload["success"] as? Bool == true
         else { throw LinearError.decoding("Linear did not confirm the project update") }
         return (payload["project"] as? [String: Any]).flatMap(Self.project(from:))
     }
@@ -225,14 +225,14 @@ public actor LinearClient {
 
     static func issue(from node: [String: Any]) -> LinearIssue? {
         guard let id = node["id"] as? String,
-              let identifier = node["identifier"] as? String,
-              let title = node["title"] as? String,
-              let stateNode = node["state"] as? [String: Any],
-              let state = state(from: stateNode)
+            let identifier = node["identifier"] as? String,
+            let title = node["title"] as? String,
+            let stateNode = node["state"] as? [String: Any],
+            let state = state(from: stateNode)
         else { return nil }
         let team = (node["team"] as? [String: Any]).flatMap { teamNode -> LinearTeam? in
             guard let id = teamNode["id"] as? String,
-                  let key = teamNode["key"] as? String
+                let key = teamNode["key"] as? String
             else { return nil }
             return LinearTeam(id: id, key: key, name: teamNode["name"] as? String ?? key)
         }
@@ -257,7 +257,7 @@ public actor LinearClient {
 
     static func project(from node: [String: Any]) -> LinearProject? {
         guard let id = node["id"] as? String,
-              let name = node["name"] as? String
+            let name = node["name"] as? String
         else { return nil }
         let status = node["status"] as? [String: Any]
         return LinearProject(
@@ -276,7 +276,7 @@ public actor LinearClient {
 
     static func state(from node: [String: Any]) -> LinearState? {
         guard let id = node["id"] as? String,
-              let name = node["name"] as? String
+            let name = node["name"] as? String
         else { return nil }
         let type = (node["type"] as? String).flatMap(LinearStateType.init(rawValue:)) ?? .unstarted
         return LinearState(id: id, name: name, type: type, color: node["color"] as? String)

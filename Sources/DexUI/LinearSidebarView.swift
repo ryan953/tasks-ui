@@ -48,9 +48,10 @@ struct LinearSidebarView: View {
             ContentUnavailableView {
                 Label(store.query.isEmpty ? "Nothing assigned" : "No matches", systemImage: "tray")
             } description: {
-                Text(store.query.isEmpty
-                    ? "Nothing in Linear is assigned to you right now."
-                    : "Nothing matches “\(store.query)”.")
+                Text(
+                    store.query.isEmpty
+                        ? "Nothing in Linear is assigned to you right now."
+                        : "Nothing matches “\(store.query)”.")
             } actions: {
                 if !store.query.isEmpty {
                     Button("Clear Search") { store.query = "" }
@@ -64,9 +65,11 @@ struct LinearSidebarView: View {
             if store.isLoading {
                 ProgressView().controlSize(.small)
             }
-            Text("\(store.filteredIssues.count) \(store.filteredIssues.count == 1 ? "issue" : "issues") · \(store.filteredProjects.count) \(store.filteredProjects.count == 1 ? "project" : "projects")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                "\(store.filteredIssues.count) \(store.filteredIssues.count == 1 ? "issue" : "issues") · \(store.filteredProjects.count) \(store.filteredProjects.count == 1 ? "project" : "projects")"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
             Spacer()
             Toggle("Show done", isOn: $store.includeDone)
                 .toggleStyle(.checkbox)
@@ -93,7 +96,8 @@ struct LinearSidebarView: View {
                     Link("All Projects", destination: url)
                 }
                 if !store.query.isEmpty,
-                   let url = LinearLinks.search(urlKey: store.urlKey, query: store.query) {
+                    let url = LinearLinks.search(urlKey: store.urlKey, query: store.query)
+                {
                     Divider()
                     Link("Search “\(store.query)” in Linear", destination: url)
                 }

@@ -1,8 +1,7 @@
 name: Release
 
+# On demand only: a tag push should not decide when something ships.
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       version:
@@ -15,17 +14,16 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Work out the version
         id: version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ inputs.version }}"
-          else
-            VERSION="${GITHUB_REF_NAME#v}"
-          fi
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building $VERSION"
@@ -111,3 +109,17 @@ jobs:
               --title "Tasks ${VERSION}" \
               --notes-file notes.md
           fi
+
+  # Hangs off the release job, not `release: published`: that event never
+  # fires, because GitHub suppresses workflow triggers for anything a
+  # GITHUB_TOKEN did, and the release above is created with github.token.
+  # Needs a TAP_TOKEN secret; without it this job fails and the release stands.
+  tap:
+    needs: release
+    uses: ryan953/homebrew-tap/.github/workflows/bump.yml@main
+    with:
+      kind: cask
+      name: tasks-ui
+      version: ${{ needs.release.outputs.tag }}
+    secrets:
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import LinearKit
 
 /// Borrows a token from the `linear` CLI so the real queries can be exercised.
@@ -27,7 +28,8 @@ enum LinearProbe {
 
     static let token: String? = {
         guard let output = runLinear(["auth", "token"]) else { return nil }
-        return output
+        return
+            output
             .split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { $0.hasPrefix("lin_") && $0.count > 20 }
@@ -103,8 +105,8 @@ struct LiveSmokeTests {
     @Test func readsWorkflowStatesForATeam() async throws {
         let client = try client()
         guard let issues = try await live({ try await client.myIssues(includeDone: true) }),
-              let teamID = issues.compactMap({ $0.team?.id }).first,
-              let states = try await live({ try await client.workflowStates(teamID: teamID) })
+            let teamID = issues.compactMap({ $0.team?.id }).first,
+            let states = try await live({ try await client.workflowStates(teamID: teamID) })
         else { return }
         #expect(!states.isEmpty)
     }

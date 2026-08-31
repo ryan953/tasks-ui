@@ -109,14 +109,14 @@ final class AppModel {
             return false
         }
         switch route {
-        case let .dexTask(id):
+        case .dexTask(let id):
             guard dex.index[id] != nil else {
                 routeFailure = "No dex task with ID \(id)."
                 return false
             }
             source = .dex
             dex.selection = id
-        case let .linearIssue(reference):
+        case .linearIssue(let reference):
             let match = linear.issues.first {
                 $0.id == reference || $0.identifier.caseInsensitiveCompare(reference) == .orderedSame
             }
@@ -126,7 +126,7 @@ final class AppModel {
             }
             source = .linear
             linear.selection = .issue(match.id)
-        case let .linearProject(reference):
+        case .linearProject(let reference):
             let match = linear.projects.first {
                 $0.id == reference || $0.name.caseInsensitiveCompare(reference) == .orderedSame
             }

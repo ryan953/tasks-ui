@@ -21,7 +21,7 @@ public enum LinearKeychain {
             kSecAttrAccount as String: account,
         ]
         let attributes: [String: Any] = [
-            kSecValueData as String: Data(trimmed.utf8),
+            kSecValueData as String: Data(trimmed.utf8)
         ]
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
         if status == errSecItemNotFound {
@@ -44,9 +44,9 @@ public enum LinearKeychain {
         ]
         var item: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data,
-              let key = String(data: data, encoding: .utf8),
-              !key.isEmpty
+            let data = item as? Data,
+            let key = String(data: data, encoding: .utf8),
+            !key.isEmpty
         else { return nil }
         return key
     }

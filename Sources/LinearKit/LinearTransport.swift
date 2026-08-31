@@ -17,13 +17,13 @@ public enum LinearError: LocalizedError, Equatable {
             "Linear rejected the API key. Create a new one at linear.app → Settings → API."
         case .rateLimited:
             "Linear is rate limiting requests. Try again shortly."
-        case let .http(status, body):
+        case .http(let status, let body):
             body.isEmpty ? "Linear returned HTTP \(status)." : "Linear returned HTTP \(status): \(body)"
-        case let .graphQL(messages):
+        case .graphQL(let messages):
             messages.joined(separator: "\n")
-        case let .decoding(detail):
+        case .decoding(let detail):
             "Could not read Linear's response: \(detail)"
-        case let .network(detail):
+        case .network(let detail):
             "Could not reach Linear: \(detail)"
         }
     }

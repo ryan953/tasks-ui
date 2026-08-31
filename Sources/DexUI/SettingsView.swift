@@ -35,16 +35,21 @@ private struct DexSettings: View {
                         .textSelection(.enabled)
                 }
                 if store.cliTooOld {
-                    Label("This dex is older than 0.16. Run: npm install -g @zeeg/dex", systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
+                    Label(
+                        "This dex is older than 0.16. Run: npm install -g @zeeg/dex",
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.orange)
                 }
             } header: {
                 Text("Executable")
             } footer: {
-                Text("Leave blank to search your login shell's PATH. dex runs on Node, so the app asks your shell where things live rather than guessing.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Leave blank to search your login shell's PATH. dex runs on Node, so the app asks your shell where things live rather than guessing."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Section {
@@ -92,8 +97,11 @@ private struct LinearSettings: View {
     var body: some View {
         Form {
             Section {
-                SecureField("Personal API key", text: $apiKey, prompt: Text(store.hasKey ? "Saved in your keychain" : "lin_api_…"))
-                    .textFieldStyle(.roundedBorder)
+                SecureField(
+                    "Personal API key", text: $apiKey,
+                    prompt: Text(store.hasKey ? "Saved in your keychain" : "lin_api_…")
+                )
+                .textFieldStyle(.roundedBorder)
 
                 if let account = store.account {
                     LabeledContent("Connected as") {
@@ -102,7 +110,7 @@ private struct LinearSettings: View {
                     }
                 }
 
-                if case let .cli(workspace) = store.keySource {
+                if case .cli(let workspace) = store.keySource {
                     Label(
                         workspace.map { "Using the linear CLI's key for \($0)." }
                             ?? "Using the linear CLI's key.",
@@ -113,11 +121,11 @@ private struct LinearSettings: View {
                 }
 
                 switch testResult {
-                case let .success(message):
+                case .success(let message):
                     Label(message, systemImage: "checkmark.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.green)
-                case let .failure(message):
+                case .failure(let message):
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -146,8 +154,12 @@ private struct LinearSettings: View {
                 Text("Linear")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("If the linear CLI is installed and logged in, its key is used automatically — nothing to set up. Otherwise create one at linear.app → Settings → Security & access → Personal API keys. A key you enter here is stored in your login keychain, never in preferences, and takes precedence over the CLI's.")
-                    Link("Open Linear API settings", destination: URL(string: "https://linear.app/settings/account/security")!)
+                    Text(
+                        "If the linear CLI is installed and logged in, its key is used automatically — nothing to set up. Otherwise create one at linear.app → Settings → Security & access → Personal API keys. A key you enter here is stored in your login keychain, never in preferences, and takes precedence over the CLI's."
+                    )
+                    Link(
+                        "Open Linear API settings",
+                        destination: URL(string: "https://linear.app/settings/account/security")!)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -161,7 +173,8 @@ private struct LinearSettings: View {
         testResult = nil
         Task {
             // An empty field with a key already saved means "test what is stored".
-            let ok = apiKey.isEmpty
+            let ok =
+                apiKey.isEmpty
                 ? await store.reload()
                 : await store.setAPIKey(apiKey, searchPath: searchPath)
             isTesting = false

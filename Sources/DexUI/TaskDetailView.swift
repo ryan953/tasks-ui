@@ -54,9 +54,11 @@ struct TaskDetailView: View {
             Button("Delete", role: .destructive) { Task { await store.delete(task.id) } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(task.children.isEmpty
-                ? "This cannot be undone."
-                : "This also deletes \(task.children.count) subtask\(task.children.count == 1 ? "" : "s"). This cannot be undone.")
+            Text(
+                task.children.isEmpty
+                    ? "This cannot be undone."
+                    : "This also deletes \(task.children.count) subtask\(task.children.count == 1 ? "" : "s"). This cannot be undone."
+            )
         }
         // The file watcher can refresh a task while it is open. Adopt the new values
         // only when the user has nothing unsaved, so typing is never overwritten.

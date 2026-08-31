@@ -23,12 +23,14 @@ struct LinearCLICredentials: Sendable {
         }
         let environment = ShellEnvironment.environment(path: searchPath)
         return LinearCLICredentials { arguments in
-            guard let result = try? await ProcessRunner.run(
-                executable: executable,
-                arguments: arguments,
-                environment: environment,
-                timeout: 15
-            ), result.status == 0 else { return nil }
+            guard
+                let result = try? await ProcessRunner.run(
+                    executable: executable,
+                    arguments: arguments,
+                    environment: environment,
+                    timeout: 15
+                ), result.status == 0
+            else { return nil }
             return result.stdout
         }
     }

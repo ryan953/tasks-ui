@@ -3,6 +3,7 @@ import DexKit
 import LinearKit
 import SwiftUI
 import Testing
+
 @testable import DexUI
 
 /// Renders the real views into an offscreen window so the layout can be inspected
@@ -20,30 +21,36 @@ struct SnapshotTests {
     static func fixture() -> [DexTask] {
         let now = Date()
         return [
-            DexTask(id: "4puhcjd4", name: "Ship the macOS task viewer", priority: 1,
-                    createdAt: now, updatedAt: now, children: ["b6n79rg4", "lxs7u9bc", "e3m27w78"]),
-            DexTask(id: "b6n79rg4", parentID: "4puhcjd4", name: "Read tasks from the dex CLI",
-                    details: "Shell out to `dex list --json --all`.", priority: 1, completed: true,
-                    result: "Reads through the CLI so dex stays the only writer.",
-                    createdAt: now, updatedAt: now, completedAt: now),
-            DexTask(id: "lxs7u9bc", parentID: "4puhcjd4",
-                    name: "Edit dependencies from the detail pane",
-                    details: """
+            DexTask(
+                id: "4puhcjd4", name: "Ship the macOS task viewer", priority: 1,
+                createdAt: now, updatedAt: now, children: ["b6n79rg4", "lxs7u9bc", "e3m27w78"]),
+            DexTask(
+                id: "b6n79rg4", parentID: "4puhcjd4", name: "Read tasks from the dex CLI",
+                details: "Shell out to `dex list --json --all`.", priority: 1, completed: true,
+                result: "Reads through the CLI so dex stays the only writer.",
+                createdAt: now, updatedAt: now, completedAt: now),
+            DexTask(
+                id: "lxs7u9bc", parentID: "4puhcjd4",
+                name: "Edit dependencies from the detail pane",
+                details: """
                     Requirements:
                       - add and remove blockers
                       - reparent a task
                       - never offer a link that would make a cycle
                     Done when: the pickers refuse anything dex would reject.
                     """,
-                    priority: 2, createdAt: now, updatedAt: now,
-                    blockedBy: ["b6n79rg4"], blocks: ["e3m27w78"]),
-            DexTask(id: "e3m27w78", parentID: "4puhcjd4", name: "Attach the build to a GitHub release",
-                    details: "Tag push builds a universal .app and uploads the zip.",
-                    priority: 3, createdAt: now, updatedAt: now, blockedBy: ["lxs7u9bc"]),
-            DexTask(id: "qq44mm21", name: "Pull issues and projects from Linear", priority: 2,
-                    createdAt: now, updatedAt: now, startedAt: now),
-            DexTask(id: "wbbnaadg", name: "Write the README", priority: 4,
-                    createdAt: now, updatedAt: now),
+                priority: 2, createdAt: now, updatedAt: now,
+                blockedBy: ["b6n79rg4"], blocks: ["e3m27w78"]),
+            DexTask(
+                id: "e3m27w78", parentID: "4puhcjd4", name: "Attach the build to a GitHub release",
+                details: "Tag push builds a universal .app and uploads the zip.",
+                priority: 3, createdAt: now, updatedAt: now, blockedBy: ["lxs7u9bc"]),
+            DexTask(
+                id: "qq44mm21", name: "Pull issues and projects from Linear", priority: 2,
+                createdAt: now, updatedAt: now, startedAt: now),
+            DexTask(
+                id: "wbbnaadg", name: "Write the README", priority: 4,
+                createdAt: now, updatedAt: now),
         ]
     }
 
@@ -127,7 +134,8 @@ struct SnapshotTests {
         // Paint the window background the real app (or a sheet) supplies. Without
         // it the bitmap caches as transparent-over-white while the views resolve
         // dark-appearance colours, and light text vanishes into the page.
-        let framed = view
+        let framed =
+            view
             .frame(width: size.width, height: size.height)
             .background(Color(nsColor: .windowBackgroundColor))
         let host = NSHostingView(rootView: framed)
@@ -162,7 +170,8 @@ struct SnapshotTests {
         for x in stride(from: 2, to: rep.pixelsWide, by: max(1, rep.pixelsWide / 40)) {
             for y in stride(from: 2, to: rep.pixelsHigh, by: max(1, rep.pixelsHigh / 40)) {
                 guard let color = rep.colorAt(x: x, y: y) else { continue }
-                let packed = UInt32(color.redComponent * 255) << 16
+                let packed =
+                    UInt32(color.redComponent * 255) << 16
                     | UInt32(color.greenComponent * 255) << 8
                     | UInt32(color.blueComponent * 255)
                 seen.insert(packed)

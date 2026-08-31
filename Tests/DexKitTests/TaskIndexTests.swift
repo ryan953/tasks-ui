@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import DexKit
 
 @Suite("Task index, states and outline")
@@ -19,8 +20,8 @@ struct TaskIndexTests {
     /// task whose blocker reopened is a problem to surface, not to hide.
     @Test func startedTasksReadAsInProgressUnlessBlocked() {
         var tasks = Self.fixture().tasks
-        tasks[1].startedAt = Date()   // "ready" -> started
-        tasks[2].startedAt = Date()   // "blocked" -> started, but still blocked
+        tasks[1].startedAt = Date()  // "ready" -> started
+        tasks[2].startedAt = Date()  // "blocked" -> started, but still blocked
         let index = TaskIndex(tasks: tasks)
         #expect(index.state(of: index["ready"]!) == .inProgress)
         #expect(index.state(of: index["blocked"]!) == .blocked)
@@ -88,7 +89,7 @@ struct TaskIndexTests {
 
     @Test func searchLooksInsideContextAndID() {
         let index = TaskIndex(tasks: [
-            DexTask(id: "zz11", name: "Nothing", details: "mentions bcrypt here"),
+            DexTask(id: "zz11", name: "Nothing", details: "mentions bcrypt here")
         ])
         #expect(!index.outline(query: "bcrypt").isEmpty)
         #expect(!index.outline(query: "zz11").isEmpty)
@@ -131,26 +132,26 @@ struct TaskIndexTests {
 struct ConfigTests {
     @Test func readsThePathOutOfTheStorageFileTable() {
         let toml = """
-        [storage]
-        engine = "file"
+            [storage]
+            engine = "file"
 
-        [storage.file]
-        mode = "centralized"
-        path = "/Users/ryan953/.dex"  # Uncomment to set custom path
-        """
+            [storage.file]
+            mode = "centralized"
+            path = "/Users/ryan953/.dex"  # Uncomment to set custom path
+            """
         #expect(DexConfig.storagePath(fromTOML: toml) == "/Users/ryan953/.dex")
     }
 
     /// The shipped dex.toml comments out the alternatives; none may be picked up.
     @Test func ignoresCommentedKeysAndOtherTables() {
         let toml = """
-        [storage]
-        engine = "file"
-        # path = "/wrong/commented"
+            [storage]
+            engine = "file"
+            # path = "/wrong/commented"
 
-        [storage.github-issues]
-        path = "/wrong/table"
-        """
+            [storage.github-issues]
+            path = "/wrong/table"
+            """
         #expect(DexConfig.storagePath(fromTOML: toml) == nil)
     }
 

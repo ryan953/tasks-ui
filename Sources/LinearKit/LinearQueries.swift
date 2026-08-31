@@ -6,90 +6,90 @@ import Foundation
 /// links out to the website for the rest rather than trying to mirror it.
 public enum LinearQueries {
     public static let issueFields = """
-    id
-    identifier
-    title
-    description
-    priority
-    url
-    updatedAt
-    state { id name type color }
-    team { id key name }
-    project { id name }
-    assignee { name }
-    """
+        id
+        identifier
+        title
+        description
+        priority
+        url
+        updatedAt
+        state { id name type color }
+        team { id key name }
+        project { id name }
+        assignee { name }
+        """
 
     public static let viewer = """
-    query Viewer {
-      viewer { id name email }
-      organization { urlKey name }
-    }
-    """
+        query Viewer {
+          viewer { id name email }
+          organization { urlKey name }
+        }
+        """
 
     public static let myIssues = """
-    query MyIssues($filter: IssueFilter!, $after: String) {
-      issues(first: 100, after: $after, filter: $filter, orderBy: updatedAt) {
-        pageInfo { hasNextPage endCursor }
-        nodes { \(issueFields) }
-      }
-    }
-    """
+        query MyIssues($filter: IssueFilter!, $after: String) {
+          issues(first: 100, after: $after, filter: $filter, orderBy: updatedAt) {
+            pageInfo { hasNextPage endCursor }
+            nodes { \(issueFields) }
+          }
+        }
+        """
 
     public static let myProjects = """
-    query MyProjects($filter: ProjectFilter!) {
-      projects(first: 100, filter: $filter, orderBy: updatedAt) {
-        nodes {
-          id
-          name
-          description
-          url
-          progress
-          targetDate
-          updatedAt
-          status { id name type }
-          lead { name }
+        query MyProjects($filter: ProjectFilter!) {
+          projects(first: 100, filter: $filter, orderBy: updatedAt) {
+            nodes {
+              id
+              name
+              description
+              url
+              progress
+              targetDate
+              updatedAt
+              status { id name type }
+              lead { name }
+            }
+          }
         }
-      }
-    }
-    """
+        """
 
     public static let teamStates = """
-    query TeamStates($teamId: String!) {
-      team(id: $teamId) {
-        states { nodes { id name type color } }
-      }
-    }
-    """
+        query TeamStates($teamId: String!) {
+          team(id: $teamId) {
+            states { nodes { id name type color } }
+          }
+        }
+        """
 
     public static let updateIssue = """
-    mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
-      issueUpdate(id: $id, input: $input) {
-        success
-        issue { \(issueFields) }
-      }
-    }
-    """
+        mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) {
+          issueUpdate(id: $id, input: $input) {
+            success
+            issue { \(issueFields) }
+          }
+        }
+        """
 
     /// Only name, description and target date are editable from the app; project
     /// status uses a per-workspace set that is better changed in Linear itself.
     public static let updateProject = """
-    mutation UpdateProject($id: String!, $input: ProjectUpdateInput!) {
-      projectUpdate(id: $id, input: $input) {
-        success
-        project {
-          id
-          name
-          description
-          url
-          progress
-          targetDate
-          updatedAt
-          status { id name type }
-          lead { name }
+        mutation UpdateProject($id: String!, $input: ProjectUpdateInput!) {
+          projectUpdate(id: $id, input: $input) {
+            success
+            project {
+              id
+              name
+              description
+              url
+              progress
+              targetDate
+              updatedAt
+              status { id name type }
+              lead { name }
+            }
+          }
         }
-      }
-    }
-    """
+        """
 
     // MARK: - Filters
 
@@ -108,7 +108,7 @@ public enum LinearQueries {
             "or": [
                 ["lead": ["isMe": ["eq": true]]],
                 ["members": ["some": ["isMe": ["eq": true]]]],
-            ],
+            ]
         ]
     }
 
