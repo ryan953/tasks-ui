@@ -19,6 +19,11 @@ jobs:
       - name: Show toolchain
         run: swift --version
 
+      # Config in .swift-format; the toolchain ships the formatter, so there is
+      # nothing to install or pin.
+      - name: Lint
+        run: swift format lint --recursive --strict Sources Tests
+
       # The integration suite drives the real CLI against a throwaway store. It
       # skips itself when dex is missing, so installing it here is what makes those
       # tests actually run.
