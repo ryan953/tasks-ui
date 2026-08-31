@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import DexUI
 
 @Suite("Borrowing the linear CLI's key")
@@ -14,9 +15,9 @@ struct LinearCLICredentialsTests {
     /// The CLI prints a banner on some paths; the key is the line that looks like one.
     @Test func picksTheKeyOutOfSurroundingOutput() {
         let output = """
-        Using workspace getsentry
-        lin_api_abcdefghijklmnopqrstuvwxyz012345
-        """
+            Using workspace getsentry
+            lin_api_abcdefghijklmnopqrstuvwxyz012345
+            """
         #expect(LinearCLICredentials.parseToken(output) == "lin_api_abcdefghijklmnopqrstuvwxyz012345")
     }
 
@@ -38,11 +39,11 @@ struct LinearCLICredentialsTests {
         let creds = LinearCLICredentials { arguments in
             guard arguments == ["auth", "whoami"] else { return nil }
             return """
-            Workspace: Sentry
-              Slug: getsentry
-              URL: https://linear.app/getsentry
-            User: A Person
-            """
+                Workspace: Sentry
+                  Slug: getsentry
+                  URL: https://linear.app/getsentry
+                User: A Person
+                """
         }
         #expect(await creds.workspace() == "Sentry")
     }

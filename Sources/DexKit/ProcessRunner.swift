@@ -12,9 +12,9 @@ public enum ProcessError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case let .launchFailed(path, underlying):
+        case .launchFailed(let path, let underlying):
             "Could not launch \(path): \(underlying)"
-        case let .timedOut(seconds):
+        case .timedOut(let seconds):
             "Command timed out after \(Int(seconds))s"
         }
     }

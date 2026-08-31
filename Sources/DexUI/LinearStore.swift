@@ -102,7 +102,8 @@ final class LinearStore {
         let grouped = Dictionary(grouping: filteredProjects) { project in
             project.statusName ?? "No status"
         }
-        return grouped
+        return
+            grouped
             .map { title, projects in
                 ProjectGroup(
                     title: title,
@@ -149,12 +150,12 @@ final class LinearStore {
     }
 
     var selectedIssue: LinearIssue? {
-        guard case let .issue(id) = selection else { return nil }
+        guard case .issue(let id) = selection else { return nil }
         return issues.first { $0.id == id }
     }
 
     var selectedProject: LinearProject? {
-        guard case let .project(id) = selection else { return nil }
+        guard case .project(let id) = selection else { return nil }
         return projects.first { $0.id == id }
     }
 
@@ -170,7 +171,8 @@ final class LinearStore {
             hasKey = true
             await client.setAPIKey(saved)
         } else if let cli = LinearCLICredentials.locate(searchPath: searchPath),
-                  let token = await cli.token() {
+            let token = await cli.token()
+        {
             keySource = .cli(workspace: await cli.workspace())
             hasKey = true
             await client.setAPIKey(token)
@@ -250,8 +252,8 @@ final class LinearStore {
 
     private func resolve(_ selection: LinearSelection) -> Bool? {
         switch selection {
-        case let .issue(id): issues.contains { $0.id == id } ? true : nil
-        case let .project(id): projects.contains { $0.id == id } ? true : nil
+        case .issue(let id): issues.contains { $0.id == id } ? true : nil
+        case .project(let id): projects.contains { $0.id == id } ? true : nil
         }
     }
 

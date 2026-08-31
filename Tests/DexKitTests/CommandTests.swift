@@ -1,4 +1,5 @@
 import Testing
+
 @testable import DexKit
 
 @Suite("dex argument building")
@@ -18,10 +19,11 @@ struct CommandTests {
                 blockedBy: ["a1", "b2"]
             )
         )
-        #expect(args == [
-            "create", "-n", "Add auth", "--description", "JWT",
-            "-p", "3", "--parent", "parent1", "-b", "a1,b2",
-        ])
+        #expect(
+            args == [
+                "create", "-n", "Add auth", "--description", "JWT",
+                "-p", "3", "--parent", "parent1", "-b", "a1,b2",
+            ])
     }
 
     /// A name starting with a dash must not be read as a flag, which is why the
@@ -72,8 +74,9 @@ struct CommandTests {
     /// to attach a commit, and the app has no terminal to answer a prompt on.
     @Test func completeAlwaysDecidesAboutTheCommit() {
         #expect(DexCommand.complete("a", result: "done") == ["complete", "a", "--result", "done", "--no-commit"])
-        #expect(DexCommand.complete("a", result: "done", commit: "abc123")
-            == ["complete", "a", "--result", "done", "--commit", "abc123"])
+        #expect(
+            DexCommand.complete("a", result: "done", commit: "abc123")
+                == ["complete", "a", "--result", "done", "--commit", "abc123"])
         // A blank SHA is the same as none.
         #expect(DexCommand.complete("a", result: "done", commit: "  ").contains("--no-commit"))
     }

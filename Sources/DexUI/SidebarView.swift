@@ -52,9 +52,10 @@ struct SidebarView: View {
             ContentUnavailableView {
                 Label(store.query.isEmpty ? "No tasks" : "No matches", systemImage: "tray")
             } description: {
-                Text(store.query.isEmpty
-                    ? "Create a task to get started."
-                    : "No task matches “\(store.query)”.")
+                Text(
+                    store.query.isEmpty
+                        ? "Create a task to get started."
+                        : "No task matches “\(store.query)”.")
             } actions: {
                 if store.query.isEmpty {
                     Button("New Task") { isCreating = true }
@@ -78,9 +79,10 @@ struct SidebarView: View {
                 .toggleStyle(.checkbox)
                 .font(.caption)
                 .disabled(store.filter != .all)
-                .help(store.filter == .all
-                    ? "Hide finished tasks from the list"
-                    : "Clear the status filter to use this")
+                .help(
+                    store.filter == .all
+                        ? "Hide finished tasks from the list"
+                        : "Clear the status filter to use this")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -101,9 +103,11 @@ struct SidebarView: View {
                 }
                 .pickerStyle(.inline)
             } label: {
-                Label("Filter", systemImage: store.filter == .all
-                    ? "line.3.horizontal.decrease.circle"
-                    : "line.3.horizontal.decrease.circle.fill")
+                Label(
+                    "Filter",
+                    systemImage: store.filter == .all
+                        ? "line.3.horizontal.decrease.circle"
+                        : "line.3.horizontal.decrease.circle.fill")
             }
             .help("Filter and sort")
         }

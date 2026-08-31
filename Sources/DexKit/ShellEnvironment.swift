@@ -67,7 +67,8 @@ public enum ShellEnvironment {
         let inheritedPath = inherited ?? ProcessInfo.processInfo.environment["PATH"] ?? ""
         var seen = Set<String>()
         var ordered: [String] = []
-        let candidates = path.split(separator: ":").map(String.init)
+        let candidates =
+            path.split(separator: ":").map(String.init)
             + inheritedPath.split(separator: ":").map(String.init)
             + fallbackPaths
         for dir in candidates where !dir.isEmpty {
@@ -85,7 +86,6 @@ public enum ShellEnvironment {
         return env
     }
 }
-
 
 /// Computes the PATH at most once, even when several callers ask at the same time.
 private actor PathCache {

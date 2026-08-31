@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import LinearKit
 
 /// Answers with canned JSON and records what it was asked.
@@ -68,17 +69,17 @@ actor StubTransport: LinearTransport {
 @Suite("Linear client")
 struct LinearClientTests {
     static let issueJSON = """
-    {"data":{"issues":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
-      {"id":"uuid-1","identifier":"ABC-12","title":"Wire up the sidebar",
-       "description":"Body text","priority":2,
-       "url":"https://linear.app/acme/issue/ABC-12/wire-up-the-sidebar",
-       "updatedAt":"2026-08-20T10:00:00.000Z",
-       "state":{"id":"state-1","name":"In Progress","type":"started","color":"#f2c94c"},
-       "team":{"id":"team-1","key":"ABC","name":"Acme"},
-       "project":{"id":"proj-1","name":"Launch"},
-       "assignee":{"name":"Sam Rivers"}}
-    ]}}}
-    """
+        {"data":{"issues":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
+          {"id":"uuid-1","identifier":"ABC-12","title":"Wire up the sidebar",
+           "description":"Body text","priority":2,
+           "url":"https://linear.app/acme/issue/ABC-12/wire-up-the-sidebar",
+           "updatedAt":"2026-08-20T10:00:00.000Z",
+           "state":{"id":"state-1","name":"In Progress","type":"started","color":"#f2c94c"},
+           "team":{"id":"team-1","key":"ABC","name":"Acme"},
+           "project":{"id":"proj-1","name":"Launch"},
+           "assignee":{"name":"Sam Rivers"}}
+        ]}}}
+        """
 
     @Test func decodesAnIssue() async throws {
         let transport = StubTransport(response: Self.issueJSON)
@@ -118,17 +119,17 @@ struct LinearClientTests {
     /// while Linear says there is more.
     @Test func followsPagination() async throws {
         let firstPage = """
-        {"data":{"issues":{"pageInfo":{"hasNextPage":true,"endCursor":"cursor-1"},"nodes":[
-          {"id":"u1","identifier":"ABC-1","title":"One","priority":0,"url":"https://linear.app/a/issue/ABC-1",
-           "state":{"id":"s","name":"Todo","type":"unstarted"}}
-        ]}}}
-        """
+            {"data":{"issues":{"pageInfo":{"hasNextPage":true,"endCursor":"cursor-1"},"nodes":[
+              {"id":"u1","identifier":"ABC-1","title":"One","priority":0,"url":"https://linear.app/a/issue/ABC-1",
+               "state":{"id":"s","name":"Todo","type":"unstarted"}}
+            ]}}}
+            """
         let secondPage = """
-        {"data":{"issues":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
-          {"id":"u2","identifier":"ABC-2","title":"Two","priority":0,"url":"https://linear.app/a/issue/ABC-2",
-           "state":{"id":"s","name":"Todo","type":"unstarted"}}
-        ]}}}
-        """
+            {"data":{"issues":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[
+              {"id":"u2","identifier":"ABC-2","title":"Two","priority":0,"url":"https://linear.app/a/issue/ABC-2",
+               "state":{"id":"s","name":"Todo","type":"unstarted"}}
+            ]}}}
+            """
         let transport = StubTransport(responses: [firstPage, secondPage])
         let client = LinearClient(transport: transport, apiKey: "k")
         let issues = try await client.myIssues()
@@ -139,11 +140,11 @@ struct LinearClientTests {
 
     @Test func stopsPagingAtTheLimit() async throws {
         let endless = """
-        {"data":{"issues":{"pageInfo":{"hasNextPage":true,"endCursor":"c"},"nodes":[
-          {"id":"u","identifier":"ABC-9","title":"Loop","priority":0,"url":"u",
-           "state":{"id":"s","name":"Todo","type":"unstarted"}}
-        ]}}}
-        """
+            {"data":{"issues":{"pageInfo":{"hasNextPage":true,"endCursor":"c"},"nodes":[
+              {"id":"u","identifier":"ABC-9","title":"Loop","priority":0,"url":"u",
+               "state":{"id":"s","name":"Todo","type":"unstarted"}}
+            ]}}}
+            """
         let transport = StubTransport(responses: Array(repeating: endless, count: 10))
         let client = LinearClient(transport: transport, apiKey: "k")
         let issues = try await client.myIssues(pageLimit: 3)
@@ -176,9 +177,9 @@ struct LinearClientTests {
 
     @Test func readsTheAccountAndWorkspaceSlug() async throws {
         let json = """
-        {"data":{"viewer":{"id":"u-1","name":"Sam Rivers","email":"sam@example.com"},
-                 "organization":{"urlKey":"acme","name":"Acme"}}}
-        """
+            {"data":{"viewer":{"id":"u-1","name":"Sam Rivers","email":"sam@example.com"},
+                     "organization":{"urlKey":"acme","name":"Acme"}}}
+            """
         let client = LinearClient(transport: StubTransport(response: json), apiKey: "k")
         let account = try await client.account()
         #expect(account.user.name == "Sam Rivers")
@@ -188,13 +189,13 @@ struct LinearClientTests {
 
     @Test func decodesProjects() async throws {
         let json = """
-        {"data":{"projects":{"nodes":[
-          {"id":"p-1","name":"Launch","description":"Ship it","url":"https://linear.app/acme/project/launch-abc",
-           "progress":0.42,"targetDate":"2026-12-01","updatedAt":"2026-08-20T10:00:00.000Z",
-           "status":{"id":"ps-1","name":"In Progress","type":"started"},
-           "lead":{"name":"Sam Rivers"}}
-        ]}}}
-        """
+            {"data":{"projects":{"nodes":[
+              {"id":"p-1","name":"Launch","description":"Ship it","url":"https://linear.app/acme/project/launch-abc",
+               "progress":0.42,"targetDate":"2026-12-01","updatedAt":"2026-08-20T10:00:00.000Z",
+               "status":{"id":"ps-1","name":"In Progress","type":"started"},
+               "lead":{"name":"Sam Rivers"}}
+            ]}}}
+            """
         let client = LinearClient(transport: StubTransport(response: json), apiKey: "k")
         let project = try #require(try await client.myProjects().first)
         #expect(project.name == "Launch")
@@ -208,10 +209,10 @@ struct LinearClientTests {
     @Test func fallsBackToLedProjectsWhenTheFilterIsRejected() async throws {
         let rejection = #"{"errors":[{"message":"Invalid filter: members"}]}"#
         let success = """
-        {"data":{"projects":{"nodes":[
-          {"id":"p-2","name":"Fallback","url":"https://linear.app/acme/project/fallback"}
-        ]}}}
-        """
+            {"data":{"projects":{"nodes":[
+              {"id":"p-2","name":"Fallback","url":"https://linear.app/acme/project/fallback"}
+            ]}}}
+            """
         let transport = StubTransport(responses: [rejection, success])
         let client = LinearClient(transport: transport, apiKey: "k")
 
@@ -225,10 +226,10 @@ struct LinearClientTests {
 
     @Test func updatesAnIssue() async throws {
         let json = """
-        {"data":{"issueUpdate":{"success":true,"issue":
-          {"id":"uuid-1","identifier":"ABC-12","title":"Renamed","priority":1,"url":"u",
-           "state":{"id":"s","name":"Todo","type":"unstarted"}}}}}
-        """
+            {"data":{"issueUpdate":{"success":true,"issue":
+              {"id":"uuid-1","identifier":"ABC-12","title":"Renamed","priority":1,"url":"u",
+               "state":{"id":"s","name":"Todo","type":"unstarted"}}}}}
+            """
         let transport = StubTransport(response: json)
         let client = LinearClient(transport: transport, apiKey: "k")
 
@@ -266,11 +267,11 @@ struct LinearClientTests {
 
     @Test func decodesWorkflowStates() async throws {
         let json = """
-        {"data":{"team":{"states":{"nodes":[
-          {"id":"s1","name":"Todo","type":"unstarted","color":"#e2e2e2"},
-          {"id":"s2","name":"Done","type":"completed","color":"#5e6ad2"}
-        ]}}}}
-        """
+            {"data":{"team":{"states":{"nodes":[
+              {"id":"s1","name":"Todo","type":"unstarted","color":"#e2e2e2"},
+              {"id":"s2","name":"Done","type":"completed","color":"#5e6ad2"}
+            ]}}}}
+            """
         let client = LinearClient(transport: StubTransport(response: json), apiKey: "k")
         let states = try await client.workflowStates(teamID: "team-1")
         #expect(states.map(\.name) == ["Todo", "Done"])
@@ -279,12 +280,12 @@ struct LinearClientTests {
 
     @Test func skipsMalformedNodesRatherThanFailing() async throws {
         let json = """
-        {"data":{"issues":{"pageInfo":{"hasNextPage":false},"nodes":[
-          {"id":"ok","identifier":"ABC-1","title":"Good","priority":0,"url":"u",
-           "state":{"id":"s","name":"Todo","type":"unstarted"}},
-          {"id":"bad","title":"Missing identifier and state"}
-        ]}}}
-        """
+            {"data":{"issues":{"pageInfo":{"hasNextPage":false},"nodes":[
+              {"id":"ok","identifier":"ABC-1","title":"Good","priority":0,"url":"u",
+               "state":{"id":"s","name":"Todo","type":"unstarted"}},
+              {"id":"bad","title":"Missing identifier and state"}
+            ]}}}
+            """
         let client = LinearClient(transport: StubTransport(response: json), apiKey: "k")
         let issues = try await client.myIssues()
         #expect(issues.map(\.identifier) == ["ABC-1"])
@@ -293,11 +294,11 @@ struct LinearClientTests {
     /// An unknown priority number must not crash or silently become Urgent.
     @Test func unknownPriorityBecomesNone() async throws {
         let json = """
-        {"data":{"issues":{"pageInfo":{"hasNextPage":false},"nodes":[
-          {"id":"x","identifier":"ABC-3","title":"Odd","priority":99,"url":"u",
-           "state":{"id":"s","name":"Todo","type":"unstarted"}}
-        ]}}}
-        """
+            {"data":{"issues":{"pageInfo":{"hasNextPage":false},"nodes":[
+              {"id":"x","identifier":"ABC-3","title":"Odd","priority":99,"url":"u",
+               "state":{"id":"s","name":"Todo","type":"unstarted"}}
+            ]}}}
+            """
         let client = LinearClient(transport: StubTransport(response: json), apiKey: "k")
         #expect(try await client.myIssues().first?.priority == LinearPriority.none)
     }

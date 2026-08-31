@@ -185,7 +185,10 @@ struct TaskPicker: View {
                 store: store,
                 excluding: excluding,
                 clearTitle: title,
-                onClear: { selection = ""; isShowing = false }
+                onClear: {
+                    selection = ""
+                    isShowing = false
+                }
             ) { id in
                 selection = id
                 isShowing = false
@@ -211,7 +214,8 @@ struct TaskSearchList: View {
 
     private var matches: [DexTask] {
         let index = store.index
-        return index
+        return
+            index
             .sorted(index.tasks.filter { !excluding.contains($0.id) }, by: .priority)
             .filter { index.matches($0, query: query) }
     }

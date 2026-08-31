@@ -34,18 +34,20 @@ public final class TaskWatcher: @unchecked Sendable {
             let flags = FSEventStreamCreateFlags(
                 kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer
             )
-            guard let created = FSEventStreamCreate(
-                kCFAllocatorDefault,
-                { _, info, _, _, _, _ in
-                    guard let info else { return }
-                    Unmanaged<TaskWatcher>.fromOpaque(info).takeUnretainedValue().schedule()
-                },
-                &context,
-                [directory.path] as CFArray,
-                FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
-                debounce / 2,
-                flags
-            ) else { return }
+            guard
+                let created = FSEventStreamCreate(
+                    kCFAllocatorDefault,
+                    { _, info, _, _, _, _ in
+                        guard let info else { return }
+                        Unmanaged<TaskWatcher>.fromOpaque(info).takeUnretainedValue().schedule()
+                    },
+                    &context,
+                    [directory.path] as CFArray,
+                    FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
+                    debounce / 2,
+                    flags
+                )
+            else { return }
             FSEventStreamSetDispatchQueue(created, queue)
             FSEventStreamStart(created)
             stream = created

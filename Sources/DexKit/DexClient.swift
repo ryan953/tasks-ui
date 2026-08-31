@@ -10,13 +10,13 @@ public enum DexError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case let .binaryNotFound(searchPath):
+        case .binaryNotFound(let searchPath):
             """
             Could not find the `dex` executable.
             Searched: \(searchPath)
             Set an explicit path in Settings (⌘,).
             """
-        case let .commandFailed(arguments, status, stderr):
+        case .commandFailed(let arguments, let status, let stderr):
             {
                 let detail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
                 let command = "dex " + arguments.joined(separator: " ")
@@ -24,11 +24,11 @@ public enum DexError: LocalizedError {
                     ? "`\(command)` exited with code \(status)."
                     : "`\(command)` failed:\n\(detail)"
             }()
-        case let .badJSON(underlying):
+        case .badJSON(let underlying):
             "Could not read the response from dex: \(underlying)"
-        case let .taskFileMissing(url):
+        case .taskFileMissing(let url):
             "No task store at \(url.path)"
-        case let .taskNotFound(id):
+        case .taskNotFound(let id):
             "Task \(id) is not in the task store."
         case .cliTooOld:
             """
@@ -172,8 +172,8 @@ public actor DexClient {
         for (offset, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty,
-                  var object = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8)) as? [String: Any],
-                  object["id"] as? String == id
+                var object = try? JSONSerialization.jsonObject(with: Data(trimmed.utf8)) as? [String: Any],
+                object["id"] as? String == id
             else { continue }
 
             object["completed"] = false
