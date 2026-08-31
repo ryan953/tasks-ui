@@ -147,11 +147,10 @@ public actor LinearClient {
             let json = try await perform(query: LinearQueries.myProjects, variables: ["filter": filter])
             let nodes = (json["projects"] as? [String: Any])?["nodes"] as? [[String: Any]] ?? []
             return nodes.compactMap(Self.project(from:))
-        } catch let LinearError.graphQL(messages) where !useNarrowProjectFilter {
+        } catch LinearError.graphQL where !useNarrowProjectFilter {
             // Some workspaces reject the membership filter. Fall back to projects
             // the user leads rather than showing none at all.
             useNarrowProjectFilter = true
-            _ = messages
             return try await myProjects()
         }
     }
