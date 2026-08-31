@@ -69,11 +69,15 @@ links. A link to something not currently loaded says so rather than doing nothin
 
 ## Install
 
-Download the zip from [Releases](../../releases), unzip it, and drag
+```sh
+brew install --cask ryan953/tap/tasks-ui
+```
+
+Or download the zip from [Releases](../../releases), unzip it, and drag
 **Tasks.app** to `/Applications`.
 
-The build is not signed with an Apple Developer certificate, so the first launch
-needs **right-click → Open**, or:
+The build is ad-hoc signed rather than notarized, so the first launch needs
+**right-click → Open** (once), or:
 
 ```sh
 xattr -dr com.apple.quarantine "/Applications/Tasks.app"
