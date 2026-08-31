@@ -114,20 +114,10 @@ jobs:
               --notes-file notes.md
           fi
 
-  # The tap owns the bump logic (look up the release, find its asset, rewrite
-  # version + asset ID + sha256), so call it rather than keeping a second copy
-  # of that knowledge here. repo-metrics and launch-agent-monitor call the same
-  # workflow.
-  #
-  # This hangs off the release job rather than listening for
-  # `release: published`, because the release above is created with
-  # github.token, and GitHub does not fire workflow-triggering events for
-  # anything a GITHUB_TOKEN did. That trigger would simply never run.
-  #
-  # Needs a TAP_TOKEN secret: Contents Read+Write on ryan953/homebrew-tap, and
-  # Contents Read here, because the bump downloads this release's asset to
-  # checksum it. Without it this job fails and says so; the release still
-  # stands, and `scripts/bump-cask.sh tasks-ui <version>` fixes it by hand.
+  # Hangs off the release job, not `release: published`: that event never
+  # fires, because GitHub suppresses workflow triggers for anything a
+  # GITHUB_TOKEN did, and the release above is created with github.token.
+  # Needs a TAP_TOKEN secret; without it this job fails and the release stands.
   tap:
     needs: release
     uses: ryan953/homebrew-tap/.github/workflows/bump.yml@main
